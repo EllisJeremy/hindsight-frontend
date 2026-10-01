@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "plays": [
+    {
+      "id": "2022090800_56",
+      "gameId": 2022090800,
+      "playId": 56,
+      "description": "(15:00) (Shotgun) J.Allen pass short right to S.Diggs to BUF 31 for 6 yards (J.Ramsey).",
+      "possessionTeam": "BUF"
+    },
+    {
+      "id": "2022090800_2979",
+      "gameId": 2022090800,
+      "playId": 2979,
+      "description": "(9:33) (Shotgun) J.Allen pass deep right to S.Diggs for 53 yards, TOUCHDOWN.",
+      "possessionTeam": "BUF"
+    },
+    {
+      "id": "2022090800_2688",
+      "gameId": 2022090800,
+      "playId": 2688,
+      "description": "(15:00) (Shotgun) J.Allen pass deep middle to G.Davis to LA 6 for 47 yards (D.Long).",
+      "possessionTeam": "BUF"
+    },
+    {
+      "id": "2022090800_2908",
+      "gameId": 2022090800,
+      "playId": 2908,
+      "description": "(11:10) (No Huddle, Shotgun) M.Stafford pass deep middle intended for C.Kupp INTERCEPTED by J.Poyer [A.Epenesa] at BUF 35. J.Poyer to BUF 41 for 6 yards (C.Kupp).",
+      "possessionTeam": "LA"
+    },
+    {
+      "id": "2022090800_2400",
+      "gameId": 2022090800,
+      "playId": 2400,
+      "description": "(5:25) (No Huddle, Shotgun) M.Stafford pass incomplete deep middle to B.Skowronek.",
+      "possessionTeam": "LA"
+    }
+  ]
+}

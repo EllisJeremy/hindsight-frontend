@@ -112,3 +112,10 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Hindsight
+# Raw Big Data Bowl CSVs (multi-GB, Kaggle license). Exported play JSON in StreamingAssets is committed.
+/[Dd]ata/
+.DS_Store
+__pycache__/
+*.pyc
