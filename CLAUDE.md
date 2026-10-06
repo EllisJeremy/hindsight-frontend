@@ -19,7 +19,8 @@ Assets/Scripts/
   Playback/  PlaybackController, PlayTimeline (sampling), ThrowArc, PlayerView, BallView, TeamColors
   Field/     FieldBuilder (field mesh, lines, hashes, TMP yard numbers, LOS / first down markers)
   Cameras/   CameraRig (ortho top-down + perspective broadcast)
-  UI/        PlaybackInput (keyboard), PlaybackHud (TMP overlay), Billboard
+  UI/        PlaybackInput (keyboard), PlaybackHud (TMP overlay), PlayNavigator + NavCell
+             (quarter > drive > play accordion bar), Billboard
   Editor/    HindsightSetup (menu: generates materials, prefabs, scene object)
 Assets/Art/Materials/          Unlit.mat, Ball.mat (generated)
 Assets/Prefabs/                Player.prefab, Ball.prefab (generated, safe to customize)
@@ -27,8 +28,9 @@ Assets/Prefabs/                Player.prefab, Ball.prefab (generated, safe to cu
 
 ## Setup
 
-1. `python3 tools/export_plays.py` (defaults: game 2022090800, 5 curated pass plays;
-   `--game ID [--plays ...]` for others). Needs pandas.
+1. `python3 tools/export_plays.py` (default: every play of game 2022090800, ~28 MB;
+   `--game ID` for another game, `--plays ID ...` for a subset). Needs pandas.
+   Clears existing JSON in the output folder first.
 2. In Unity: Window > TextMeshPro > Import TMP Essential Resources (once).
 3. Hindsight > Setup Scene, then save the scene. This creates the materials and prefabs
    (only if missing), adds a `Hindsight` object with `HindsightApp`, and deletes other scene cameras.
@@ -36,6 +38,12 @@ Assets/Prefabs/                Player.prefab, Ball.prefab (generated, safe to cu
 
 Controls: Space play/pause, Left/Right step a frame, 1-4 speed (0.25/0.5/1/2x), R restart,
 N/] next play, P/[ previous play, C toggle camera.
+
+Play navigator (bottom bar, fixed width): quarters > drives > plays. Only the quarter and drive
+containing the current play are open; opening one takes width from its collapsed siblings.
+Clicking a quarter or drive loads its first play; clicking a play loads it. Play cells are
+colored by result (green complete, gray incomplete, red INT, blue run, orange sack, teal
+scramble, gold TD). Hover shows the play description above the bar.
 
 ## Conventions
 
@@ -71,14 +79,31 @@ N/] next play, P/[ previous play, C toggle camera.
 ```jsonc
 {
   "schemaVersion": 1,
-  "plays": [
+  "gameId": 2022090800,
+  "homeTeam": "LA",
+  "visitorTeam": "BUF",
+  "plays": [                           // one game, ordered by playId (chronological)
     { "id": "2022090800_56",          // used to fetch the play
       "gameId": 2022090800, "playId": 56,
-      "description": "(15:00) (Shotgun) J.Allen pass short right to S.Diggs ...",
-      "possessionTeam": "BUF" }
+      "quarter": 1,                    // 5 = overtime
+      "gameClock": "15:00",
+      "driveNumber": 1,                // see "Drives" below
+      "possessionTeam": "BUF",
+      "down": 1, "yardsToGo": 10,
+      "playType": "pass",              // pass | run | sack | scramble | kneel | spike
+      "passResult": "C",               // "" for non-pass plays
+      "yardsGained": 6,
+      "touchdown": false,
+      "description": "(15:00) (Shotgun) J.Allen pass short right to S.Diggs ..." }
   ]
 }
 ```
+
+Drives: plays.csv has no drive id. The exporter numbers drives 1..N per game, starting a
+new drive when `possessionTeam` changes and at the start of Q3 and OT. Special teams plays
+aren't in the data, so this is an approximation. A drive can span two quarters; the
+navigator shows it in both. The client requires `plays` to be grouped contiguously by
+quarter and drive (true when sorted by playId).
 
 `{gameId}_{playId}.json` (later `GET /plays/{id}`):
 
@@ -92,6 +117,7 @@ N/] next play, P/[ previous play, C toggle camera.
   "description": "...",          // plays.playDescription
   "quarter": 1,
   "gameClock": "15:00",
+  "driveNumber": 1,
   "down": 1,
   "yardsToGo": 10,
   "possessionTeam": "BUF",       // offense

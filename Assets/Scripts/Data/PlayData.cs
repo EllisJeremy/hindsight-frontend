@@ -18,6 +18,8 @@ namespace Hindsight.Data
         public string description;
         public int quarter;
         public string gameClock;
+        /// <summary>1-based drive within the game (derived from possession changes).</summary>
+        public int driveNumber;
         public int down;
         public int yardsToGo;
         public string possessionTeam;
@@ -81,11 +83,15 @@ namespace Hindsight.Data
         public float s;
     }
 
-    /// <summary>List of available plays (index.json / GET /plays).</summary>
+    /// <summary>A game's plays in order (index.json / GET /plays).</summary>
     [Serializable]
     public class PlayIndex
     {
         public int schemaVersion;
+        public long gameId;
+        public string homeTeam;
+        public string visitorTeam;
+        /// <summary>Ordered by playId (chronological).</summary>
         public PlayIndexEntry[] plays;
     }
 
@@ -96,7 +102,17 @@ namespace Hindsight.Data
         public string id;
         public long gameId;
         public int playId;
-        public string description;
+        public int quarter;
+        public string gameClock;
+        public int driveNumber;
         public string possessionTeam;
+        public int down;
+        public int yardsToGo;
+        /// <summary>pass | run | sack | scramble | kneel | spike.</summary>
+        public string playType;
+        public string passResult;
+        public int yardsGained;
+        public bool touchdown;
+        public string description;
     }
 }

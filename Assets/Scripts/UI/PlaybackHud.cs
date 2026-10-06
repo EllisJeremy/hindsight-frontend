@@ -2,23 +2,29 @@ using Hindsight.Data;
 using Hindsight.Playback;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 namespace Hindsight.UI
 {
     /// <summary>
-    /// Minimal screen overlay built in code: play context at the top, playback state and
-    /// controls at the bottom.
+    /// Minimal screen overlay built in code: play context at the top, the play navigator bar
+    /// at the bottom, and playback state just above it.
     /// </summary>
     public class PlaybackHud : MonoBehaviour
     {
         [SerializeField] float fontSize = 22f;
+        [SerializeField] float navigatorHeight = 116f;
+
+        const float Margin = 16f;
 
         PlaybackController playback;
         PlayLoader loader;
         TextMeshProUGUI header;
         TextMeshProUGUI status;
         string loadError;
+        string hoverText;
 
         public void Init(PlaybackController playbackController, PlayLoader playLoader)
         {
@@ -43,7 +49,7 @@ namespace Hindsight.UI
                 : $"<b>{p.visitorTeam}</b> @ {p.homeTeam}";
             header.text =
                 $"{matchup}   Q{p.quarter} {p.gameClock}   {Ordinal(p.down)} & {p.yardsToGo}   " +
-                $"<size=80%>play {loader.CurrentIndex + 1}/{loader.Plays.Count}</size>\n" +
+                $"<size=80%>drive {p.driveNumber}, play {loader.CurrentIndex + 1}/{loader.Plays.Count}</size>\n" +
                 $"<size=80%>{p.description}</size>";
         }
 
@@ -68,14 +74,14 @@ namespace Hindsight.UI
                 $"{state}  {playback.Speed:0.##}x   frame {t.FrameIdAt(frame)}/{t.Play.frames[t.FrameCount - 1].frameId}" +
                 $"   {(frame - t.SnapIndex) / t.FrameRate:+0.0;-0.0}s from snap   {evt}" +
                 (loader.IsLoading ? "   loading..." : "") +
-                $"\n<size=75%><color=#AAB4C0>{PlaybackInput.Help}</color></size>";
+                $"\n<size=75%><color=#AAB4C0>{hoverText ?? PlaybackInput.Help}</color></size>";
         }
 
         static string Ordinal(int n) => n switch { 1 => "1st", 2 => "2nd", 3 => "3rd", _ => $"{n}th" };
 
         void BuildCanvas()
         {
-            var canvasGo = new GameObject("HUD", typeof(Canvas), typeof(CanvasScaler));
+            var canvasGo = new GameObject("HUD", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             canvasGo.transform.SetParent(transform, false);
             var canvas = canvasGo.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -86,6 +92,21 @@ namespace Hindsight.UI
 
             header = CreateText(canvas.transform, "Header", top: true);
             status = CreateText(canvas.transform, "Status", top: false);
+            ((RectTransform)status.transform).anchoredPosition = new Vector2(0f, Margin + navigatorHeight + 6f);
+
+            var navRect = new GameObject("PlayNavigator", typeof(RectTransform)).GetComponent<RectTransform>();
+            navRect.SetParent(canvas.transform, false);
+            navRect.anchorMin = Vector2.zero;
+            navRect.anchorMax = new Vector2(1f, 0f);
+            navRect.pivot = new Vector2(0.5f, 0f);
+            navRect.anchoredPosition = new Vector2(0f, Margin);
+            navRect.sizeDelta = new Vector2(-2f * Margin, navigatorHeight);
+            navRect.gameObject.AddComponent<PlayNavigator>().Init(loader, text => hoverText = text);
+
+            // Clicks need an EventSystem; the Input System module picks up its default UI actions.
+            if (EventSystem.current == null && FindAnyObjectByType<EventSystem>() == null)
+                new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule))
+                    .transform.SetParent(transform, false);
         }
 
         TextMeshProUGUI CreateText(Transform parent, string objectName, bool top)

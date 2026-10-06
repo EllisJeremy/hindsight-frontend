@@ -20,6 +20,7 @@ namespace Hindsight.Data
         public event Action<PlayData> PlayLoaded;
         public event Action<string> LoadFailed;
 
+        public PlayIndex Index => index;
         public IReadOnlyList<PlayIndexEntry> Plays => index?.plays ?? Array.Empty<PlayIndexEntry>();
         public int CurrentIndex { get; private set; } = -1;
         public bool IsLoading { get; private set; }
