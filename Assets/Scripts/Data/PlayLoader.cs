@@ -6,16 +6,22 @@ namespace Hindsight.Data
 {
     /// <summary>
     /// Owns the play list and loads plays by position in it. Raises PlayLoaded when a
-    /// play is ready. Plays currently come from StreamingAssets; set source to Remote and
-    /// point remoteBaseUrl at the backend once it serves the same JSON.
+    /// play is ready. Plays come from the backend API by default; StreamingAssets is an
+    /// offline fallback that reads the exporter's JSON directly.
     /// </summary>
     public class PlayLoader : MonoBehaviour
     {
-        public enum SourceKind { StreamingAssets, Remote }
+        // Backend is 0 so scenes saved before it existed (StreamingAssets was 0) switch to it.
+        public enum SourceKind { Backend, StreamingAssets }
 
-        [SerializeField] SourceKind source = SourceKind.StreamingAssets;
-        [Tooltip("Used when source is Remote. Expects {url}/index.json and {url}/{id}.json.")]
-        [SerializeField] string remoteBaseUrl = "http://localhost:8000/plays";
+        /// <summary>The schemaVersion this client understands (see CLAUDE.md).</summary>
+        public const int SchemaVersion = 1;
+
+        [SerializeField] SourceKind source = SourceKind.Backend;
+        [Tooltip("API root (footballcapstone/apps/api). Used when source is Backend.")]
+        [SerializeField] string apiBaseUrl = "http://localhost:8000";
+        [Tooltip("Game to load from the backend. 0 = the first game it lists.")]
+        [SerializeField] long gameId;
 
         public event Action<PlayData> PlayLoaded;
         public event Action<string> LoadFailed;
@@ -30,8 +36,8 @@ namespace Hindsight.Data
         readonly Dictionary<string, PlayData> cache = new();
         int requestVersion;
 
-        public IPlaySource Source => playSource ??= source == SourceKind.Remote
-            ? new WebPlaySource(remoteBaseUrl)
+        public IPlaySource Source => playSource ??= source == SourceKind.Backend
+            ? new ApiPlaySource(apiBaseUrl, gameId)
             : WebPlaySource.StreamingAssets();
 
         /// <summary>Fetch the play list, then load the first play.</summary>
@@ -47,6 +53,12 @@ namespace Hindsight.Data
                 return;
             }
 
+            if (index == null || index.schemaVersion != SchemaVersion)
+            {
+                Fail($"Play index has schemaVersion {index?.schemaVersion}, this client reads {SchemaVersion}.");
+                index = null;
+                return;
+            }
             if (Plays.Count == 0)
             {
                 Fail("Play index is empty.");
@@ -86,6 +98,11 @@ namespace Hindsight.Data
             if (version != requestVersion) return;
             IsLoading = false;
 
+            if (play == null || play.schemaVersion != SchemaVersion)
+            {
+                Fail($"Play {id} has schemaVersion {play?.schemaVersion}, this client reads {SchemaVersion}.");
+                return;
+            }
             if (play.frames == null || play.frames.Length == 0)
             {
                 Fail($"Play {id} has no frames.");

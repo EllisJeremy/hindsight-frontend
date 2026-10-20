@@ -8,7 +8,7 @@ namespace Hindsight.Data
     /// Loads plays over UnityWebRequest from a base URL:
     ///   {baseUrl}/index.json      -> PlayIndex
     ///   {baseUrl}/{playId}.json   -> PlayData
-    /// Works for StreamingAssets (file:// or http:// in WebGL) and for a remote backend.
+    /// Used for StreamingAssets (file:// or http:// in WebGL); the backend uses ApiPlaySource.
     /// No System.IO, so it is WebGL safe.
     /// </summary>
     public class WebPlaySource : IPlaySource

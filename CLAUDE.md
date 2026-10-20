@@ -5,8 +5,9 @@ top-down like a chess game review. Nothing is simulated: the app plays back reco
 interpolating between 10 Hz tracking frames. Must stay WebGL compatible.
 
 Data source: NFL Big Data Bowl 2025 (2022 season, weeks 1-9). Raw CSVs live in `Data/raw/`
-(git-ignored, never imported into Unity). Plays are currently exported to static JSON in
-`Assets/StreamingAssets/plays/`; a backend will later serve the same JSON.
+(git-ignored, never imported into Unity). `tools/export_plays.py` turns them into play JSON,
+which the backend (`footballcapstone/apps/api`) serves. The app loads plays from that API by
+default; reading the JSON straight from `Assets/StreamingAssets/plays/` is an offline fallback.
 
 ## Layout
 
@@ -15,7 +16,8 @@ tools/export_plays.py          CSV -> play JSON exporter (pandas)
 Assets/StreamingAssets/plays/  index.json + {gameId}_{playId}.json
 Assets/Scripts/
   HindsightApp.cs              composition root, the only scene object
-  Data/      PlayData (JSON DTOs), IPlaySource, WebPlaySource (UnityWebRequest), PlayLoader
+  Data/      PlayData (JSON DTOs), IPlaySource, ApiPlaySource (backend), WebPlaySource
+             (StreamingAssets), PlayLoader
   Playback/  PlaybackController, PlayTimeline (sampling), ThrowArc, PlayerView, BallView, TeamColors
   Field/     FieldBuilder (field mesh, lines, hashes, TMP yard numbers, LOS / first down markers)
   Cameras/   CameraRig (ortho top-down + perspective broadcast)
@@ -31,10 +33,16 @@ Assets/Prefabs/                Player.prefab, Ball.prefab (generated, safe to cu
 1. `python3 tools/export_plays.py` (default: every play of game 2022090800, ~28 MB;
    `--game ID` for another game, `--plays ID ...` for a subset). Needs pandas.
    Clears existing JSON in the output folder first.
-2. In Unity: Window > TextMeshPro > Import TMP Essential Resources (once).
-3. Hindsight > Setup Scene, then save the scene. This creates the materials and prefabs
+2. Start the backend: in `footballcapstone/apps/api`, `uvicorn api.main:app` (see its README).
+   Point its `PLAYS_DIR` at the folder you exported to.
+3. In Unity: Window > TextMeshPro > Import TMP Essential Resources (once).
+4. Hindsight > Setup Scene, then save the scene. This creates the materials and prefabs
    (only if missing), adds a `Hindsight` object with `HindsightApp`, and deletes other scene cameras.
-4. Press Play.
+5. Press Play.
+
+`PlayLoader` settings: **Source** (Backend or StreamingAssets), **Api Base Url** (default
+`http://localhost:8000`), **Game Id** (0 = first game from `GET /games`). Load errors, including
+"is the API running?", show in the HUD status line.
 
 Controls: Space play/pause, Left/Right step a frame, 1-4 speed (0.25/0.5/1/2x), R restart,
 N/] next play, P/[ previous play, C toggle camera.
@@ -74,7 +82,7 @@ scramble, gold TD). Hover shows the play description above the bar.
 
 ## Play JSON schema (schemaVersion 1)
 
-`index.json` (later `GET /plays`):
+`index.json` / `GET /plays?gameId=`:
 
 ```jsonc
 {
@@ -105,7 +113,7 @@ aren't in the data, so this is an approximation. A drive can span two quarters; 
 navigator shows it in both. The client requires `plays` to be grouped contiguously by
 quarter and drive (true when sorted by playId).
 
-`{gameId}_{playId}.json` (later `GET /plays/{id}`):
+`{gameId}_{playId}.json` / `GET /plays/{id}`:
 
 ```jsonc
 {
@@ -151,7 +159,8 @@ Notes for producers (exporter or backend):
   field names exactly as above. Numbers are rounded to 2 decimals.
 - Every frame should contain every player in `players`; the client holds the last known
   sample if one is missing. Players are matched by `nflId`, not array position.
-- Bump `schemaVersion` on breaking changes.
+- Bump `schemaVersion` on breaking changes. The client rejects any version other than
+  `PlayLoader.SchemaVersion`.
 
 ## Raw data notes (verified)
 

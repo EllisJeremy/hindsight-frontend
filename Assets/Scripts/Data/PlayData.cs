@@ -95,6 +95,23 @@ namespace Hindsight.Data
         public PlayIndexEntry[] plays;
     }
 
+    /// <summary>Games the backend has loaded (GET /games).</summary>
+    [Serializable]
+    public class GameList
+    {
+        public int schemaVersion;
+        public GameSummary[] games;
+    }
+
+    [Serializable]
+    public class GameSummary
+    {
+        public long gameId;
+        public string homeTeam;
+        public string visitorTeam;
+        public int playCount;
+    }
+
     [Serializable]
     public class PlayIndexEntry
     {
