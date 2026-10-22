@@ -30,6 +30,8 @@ namespace Hindsight.Playback
         /// <summary>Current fractional frame index into the timeline.</summary>
         public float CurrentFrame => Timeline == null ? 0f : elapsed * Timeline.FrameRate;
         public BallView Ball => ball;
+        /// <summary>Spawned player visuals, in the same order as Timeline.Players.</summary>
+        public IReadOnlyList<PlayerView> PlayerViews => views;
 
         public event Action<PlayTimeline> PlayChanged;
 

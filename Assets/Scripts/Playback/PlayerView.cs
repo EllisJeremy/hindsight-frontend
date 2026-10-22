@@ -42,6 +42,13 @@ namespace Hindsight.Playback
             transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
         }
 
+        /// <summary>Hide or show this player's meshes and number (e.g. for a first-person camera inside them).</summary>
+        public void SetHidden(bool hidden)
+        {
+            foreach (var r in GetComponentsInChildren<Renderer>(true))
+                r.enabled = !hidden;
+        }
+
         void Tint(Renderer[] renderers, Color color)
         {
             if (renderers == null) return;

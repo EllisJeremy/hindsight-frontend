@@ -18,10 +18,19 @@ namespace Hindsight.Playback
         public readonly int SnapIndex;
         public readonly ThrowArc.Window Throw;
 
+        /// <summary>A player this close to the ball (yards) can pick it up as the carrier.</summary>
+        const float CarrierRadius = 1.5f;
+        /// <summary>The current carrier keeps the ball while within this distance, so the
+        /// carrier doesn't flicker between players in a pile or at a handoff.</summary>
+        const float KeepRadius = 1f;
+        /// <summary>Frames a new carrier must hold the ball before the switch counts.</summary>
+        const int CarrierHoldFrames = 3;
+
         readonly Vector2[] positions;   // [player * FrameCount + frame]
         readonly float[] orientations;  // degrees, 0 = +y, clockwise
         readonly Vector2[] ballPositions;
         readonly string[] latestEvent;  // most recent event at or before each frame
+        readonly int[] carriers;        // player index holding the ball per frame, -1 if loose
 
         public float LastFrame => FrameCount - 1;
         public float Duration => LastFrame / FrameRate;
@@ -71,6 +80,7 @@ namespace Hindsight.Playback
 
             FillGaps(seen);
             Throw = ThrowArc.FindWindow(play.frames, ballPositions);
+            carriers = FindCarriers();
         }
 
         /// <summary>Interpolated field position (data x, y) of a player at a fractional frame.</summary>
@@ -95,6 +105,13 @@ namespace Hindsight.Playback
             return Vector2.Lerp(ballPositions[a], ballPositions[b], t);
         }
 
+        /// <summary>
+        /// Player index of whoever has the ball at a frame, or -1 while it is in the air or
+        /// loose. The data has no carrier column; this is inferred from distance to the ball
+        /// (see FindCarriers), so it is a best guess, not a fact from the data.
+        /// </summary>
+        public int CarrierAt(float frame) => carriers[Mathf.Clamp(Mathf.RoundToInt(frame), 0, FrameCount - 1)];
+
         /// <summary>Most recent event at or before the given frame, or null.</summary>
         public string EventAt(float frame) => latestEvent[Mathf.Clamp(Mathf.FloorToInt(frame), 0, FrameCount - 1)];
 
@@ -107,6 +124,65 @@ namespace Hindsight.Playback
             a = Mathf.FloorToInt(frame);
             b = Mathf.Min(a + 1, FrameCount - 1);
             t = frame - a;
+        }
+
+        int[] FindCarriers()
+        {
+            // Raw pass: nearest eligible player within CarrierRadius, sticky within KeepRadius.
+            // Only the offense can carry, except a defender after the throw on an interception;
+            // otherwise a tackler or a lineman over the ball would steal it. Fumbles recovered by
+            // the defense fall back to following the ball.
+            bool interception = Play.passResult == "IN" && Throw.IsValid;
+            var raw = new int[FrameCount];
+            int carrier = -1;
+            for (int f = 0; f < FrameCount; f++)
+            {
+                if (InThrow(f))
+                {
+                    raw[f] = carrier = -1;
+                    continue;
+                }
+
+                Vector2 ball = ballPositions[f];
+                if (carrier >= 0 && Vector2.Distance(positions[carrier * FrameCount + f], ball) <= KeepRadius)
+                {
+                    raw[f] = carrier;
+                    continue;
+                }
+
+                bool defenseEligible = interception && f >= Throw.Start;
+                carrier = -1;
+                float best = CarrierRadius;
+                for (int p = 0; p < Players.Length; p++)
+                {
+                    if (Players[p].side != "offense" && !defenseEligible) continue;
+                    float d = Vector2.Distance(positions[p * FrameCount + f], ball);
+                    if (d <= best) { best = d; carrier = p; }
+                }
+                raw[f] = carrier;
+            }
+
+            // Debounce: a new carrier only counts once it has held the ball for CarrierHoldFrames,
+            // so noisy ball samples don't flick the camera to someone for a frame or two.
+            // The release is exact (from the pass_forward event), so it switches immediately.
+            var result = new int[FrameCount];
+            int current = FrameCount > 0 ? raw[0] : -1;
+            for (int f = 0; f < FrameCount; f++)
+            {
+                if (raw[f] != current && (InThrow(f) || Holds(raw, f)))
+                    current = raw[f];
+                result[f] = current;
+            }
+            return result;
+        }
+
+        bool InThrow(int f) => Throw.IsValid && f > Throw.Start && f < Throw.End;
+
+        static bool Holds(int[] raw, int from)
+        {
+            for (int f = from; f < Mathf.Min(from + CarrierHoldFrames, raw.Length); f++)
+                if (raw[f] != raw[from]) return false;
+            return true;
         }
 
         // A player missing from some frames holds their nearest known sample.

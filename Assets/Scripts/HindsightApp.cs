@@ -40,10 +40,10 @@ namespace Hindsight
             cameras = GetComponent<CameraRig>();
 
             field.Build(unlitMaterial);
-            cameras.Build();
+            cameras.Build(playback);
             playback.Configure(playerPrefab, ballPrefab);
             GetComponent<PlaybackInput>().Init(playback, loader, cameras);
-            GetComponent<PlaybackHud>().Init(playback, loader);
+            GetComponent<PlaybackHud>().Init(playback, loader, cameras);
 
             loader.PlayLoaded += OnPlayLoaded;
         }

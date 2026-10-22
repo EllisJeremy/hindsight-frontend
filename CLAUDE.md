@@ -20,9 +20,10 @@ Assets/Scripts/
              (StreamingAssets), PlayLoader
   Playback/  PlaybackController, PlayTimeline (sampling), ThrowArc, PlayerView, BallView, TeamColors
   Field/     FieldBuilder (field mesh, lines, hashes, TMP yard numbers, LOS / first down markers)
-  Cameras/   CameraRig (ortho top-down + perspective broadcast)
+  Cameras/   CameraRig (top-down, broadcast, first person, third person)
   UI/        PlaybackInput (keyboard), PlaybackHud (TMP overlay), PlayNavigator + NavCell
-             (quarter > drive > play accordion bar), Billboard
+             (quarter > drive > play accordion bar), FollowPicker (who the follow cameras
+             ride), Billboard
   Editor/    HindsightSetup (menu: generates materials, prefabs, scene object)
 Assets/Art/Materials/          Unlit.mat, Ball.mat (generated)
 Assets/Prefabs/                Player.prefab, Ball.prefab (generated, safe to customize)
@@ -45,7 +46,20 @@ Assets/Prefabs/                Player.prefab, Ball.prefab (generated, safe to cu
 "is the API running?", show in the HUD status line.
 
 Controls: Space play/pause, Left/Right step a frame, 1-4 speed (0.25/0.5/1/2x), R restart,
-N/] next play, P/[ previous play, C toggle camera.
+N/] next play, P/[ previous play, C next camera (Shift+C previous).
+
+Cameras cycle top-down > broadcast > first person > third person. The two follow views
+ride the ball carrier by default and chase the ball while it is in the air or loose; the
+dropdown at the top right (shown only in those views) pins them to one player instead. The
+choice carries over to the next play if that player is in it, else it resets to the ball.
+First person looks along the body orientation `o` (the data has no gaze) and hides the
+ridden player's own mesh.
+
+Ball carrier (`PlayTimeline.CarrierAt`): the data has no carrier column, so it is inferred.
+Nearest offensive player within 1.5 yd of the ball, kept while within 1 yd; nobody between
+`pass_forward` and the pass arrival; defenders only after the throw on an interception; a
+new carrier must hold for 3 frames. On the BUF @ LA game this finds the receiver on 49 of
+50 completions. Fumbles to the defense and odd ball samples fall back to following the ball.
 
 Play navigator (bottom bar, fixed width): quarters > drives > plays. Only the quarter and drive
 containing the current play are open; opening one takes width from its collapsed siblings.

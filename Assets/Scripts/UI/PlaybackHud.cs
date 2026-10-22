@@ -1,3 +1,4 @@
+using Hindsight.Cameras;
 using Hindsight.Data;
 using Hindsight.Playback;
 using TMPro;
@@ -16,20 +17,23 @@ namespace Hindsight.UI
     {
         [SerializeField] float fontSize = 22f;
         [SerializeField] float navigatorHeight = 116f;
+        [SerializeField] float followPickerWidth = 360f;
 
         const float Margin = 16f;
 
         PlaybackController playback;
         PlayLoader loader;
+        CameraRig cameras;
         TextMeshProUGUI header;
         TextMeshProUGUI status;
         string loadError;
         string hoverText;
 
-        public void Init(PlaybackController playbackController, PlayLoader playLoader)
+        public void Init(PlaybackController playbackController, PlayLoader playLoader, CameraRig cameraRig)
         {
             playback = playbackController;
             loader = playLoader;
+            cameras = cameraRig;
             BuildCanvas();
             playback.PlayChanged += OnPlayChanged;
             loader.LoadFailed += message => loadError = message;
@@ -74,7 +78,31 @@ namespace Hindsight.UI
                 $"{state}  {playback.Speed:0.##}x   frame {t.FrameIdAt(frame)}/{t.Play.frames[t.FrameCount - 1].frameId}" +
                 $"   {(frame - t.SnapIndex) / t.FrameRate:+0.0;-0.0}s from snap   {evt}" +
                 (loader.IsLoading ? "   loading..." : "") +
+                $"   {CameraLabel(t, frame)}" +
                 $"\n<size=75%><color=#AAB4C0>{hoverText ?? PlaybackInput.Help}</color></size>";
+        }
+
+        string CameraLabel(PlayTimeline t, float frame)
+        {
+            if (cameras == null) return "";
+            string view = cameras.Current switch
+            {
+                CameraRig.View.TopDown => "top-down",
+                CameraRig.View.Broadcast => "broadcast",
+                CameraRig.View.FirstPerson => "first person",
+                _ => "third person",
+            };
+            if (!cameras.IsFollowView) return $"[{view}]";
+
+            int subject = -1;
+            if (cameras.FollowedPlayerId != 0)
+                subject = System.Array.FindIndex(t.Players, p => p.nflId == cameras.FollowedPlayerId);
+            else
+                subject = t.CarrierAt(frame);
+            string who = subject < 0
+                ? "ball"
+                : $"{t.Players[subject].club} #{t.Players[subject].jerseyNumber} {t.Players[subject].name}";
+            return $"[{view}: {who}]";
         }
 
         static string Ordinal(int n) => n switch { 1 => "1st", 2 => "2nd", 3 => "3rd", _ => $"{n}th" };
@@ -91,6 +119,16 @@ namespace Hindsight.UI
             scaler.matchWidthOrHeight = 0.5f;
 
             header = CreateText(canvas.transform, "Header", top: true);
+            // Leave the top-right corner for the follow picker.
+            var headerRect = (RectTransform)header.transform;
+            headerRect.offsetMax = new Vector2(headerRect.offsetMax.x - followPickerWidth - Margin, headerRect.offsetMax.y);
+
+            var pickerRect = new GameObject("FollowPicker", typeof(RectTransform)).GetComponent<RectTransform>();
+            pickerRect.SetParent(canvas.transform, false);
+            pickerRect.anchorMin = pickerRect.anchorMax = pickerRect.pivot = Vector2.one;
+            pickerRect.anchoredPosition = new Vector2(-Margin, -Margin);
+            pickerRect.sizeDelta = new Vector2(followPickerWidth, 36f);
+            pickerRect.gameObject.AddComponent<FollowPicker>().Init(playback, cameras, fontSize);
             status = CreateText(canvas.transform, "Status", top: false);
             ((RectTransform)status.transform).anchoredPosition = new Vector2(0f, Margin + navigatorHeight + 6f);
 
