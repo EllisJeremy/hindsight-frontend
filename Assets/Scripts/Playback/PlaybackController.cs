@@ -82,6 +82,14 @@ namespace Hindsight.Playback
             SeekFrame(start);
         }
 
+        /// <summary>Pause and jump to a fractional frame (the control bar's scrubber).</summary>
+        public void Scrub(float frame)
+        {
+            if (Timeline == null) return;
+            IsPlaying = false;
+            SeekFrame(frame);
+        }
+
         public void SetSpeedIndex(int index) => SpeedIndex = Mathf.Clamp(index, 0, Speeds.Length - 1);
 
         public void SeekFrame(float frame)

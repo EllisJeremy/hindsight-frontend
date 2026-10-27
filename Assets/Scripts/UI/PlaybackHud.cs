@@ -11,13 +11,14 @@ namespace Hindsight.UI
 {
     /// <summary>
     /// Minimal screen overlay built in code: play context at the top, the play navigator bar
-    /// at the bottom, and playback state just above it.
+    /// at the bottom, the control bar above it, and playback state above that.
     /// </summary>
     public class PlaybackHud : MonoBehaviour
     {
         [SerializeField] float fontSize = 22f;
         [SerializeField] float navigatorHeight = 116f;
         [SerializeField] float followPickerWidth = 360f;
+        [SerializeField] float controlBarHeight = 38f;
 
         const float Margin = 16f;
 
@@ -26,6 +27,7 @@ namespace Hindsight.UI
         CameraRig cameras;
         TextMeshProUGUI header;
         TextMeshProUGUI status;
+        ShortcutsModal shortcuts;
         string loadError;
         string hoverText;
 
@@ -107,16 +109,17 @@ namespace Hindsight.UI
                 status.text = "Loading...";
                 return;
             }
+            // Play state, speed and camera are on the control bar, so this line is only what it can't show.
             float frame = playback.CurrentFrame;
-            string state = playback.IsPlaying ? "PLAYING" : "PAUSED";
-            string evt = t.EventAt(frame) ?? "-";
+            string evt = t.EventAt(frame);
             status.text =
-                $"{state}  {playback.Speed:0.##}x   frame {t.FrameIdAt(frame)}/{t.Play.frames[t.FrameCount - 1].frameId}" +
-                $"   {(frame - t.SnapIndex) / t.FrameRate:+0.0;-0.0}s from snap   {evt}" +
+                $"<color=#FFFFFFAA>frame {t.FrameIdAt(frame)}/{t.Play.frames[t.FrameCount - 1].frameId}" +
+                $"   {(frame - t.SnapIndex) / t.FrameRate:+0.0;-0.0}s from snap" +
+                (evt != null ? $"   {evt}" : "") + "</color>" +
                 SourceLabel(t, frame) +
                 (loader.IsLoading ? "   loading..." : "") +
-                $"   {CameraLabel(t, frame)}" +
-                $"\n<size=75%><color=#AAB4C0>{hoverText ?? PlaybackInput.Help}</color></size>";
+                (cameras != null && cameras.IsFollowView ? $"   <color=#FFFFFFAA>{CameraLabel(t, frame)}</color>" : "") +
+                (hoverText != null ? $"\n<size=75%><color=#FFFFFF99>{hoverText}</color></size>" : "");
         }
 
         string CameraLabel(PlayTimeline t, float frame)
@@ -176,8 +179,19 @@ namespace Hindsight.UI
             pickerRect.anchoredPosition = new Vector2(-Margin, -Margin);
             pickerRect.sizeDelta = new Vector2(followPickerWidth, 36f);
             pickerRect.gameObject.AddComponent<FollowPicker>().Init(playback, cameras, fontSize);
+            var controlsRect = new GameObject("ControlBar", typeof(RectTransform)).GetComponent<RectTransform>();
+            controlsRect.SetParent(canvas.transform, false);
+            controlsRect.anchorMin = Vector2.zero;
+            controlsRect.anchorMax = new Vector2(1f, 0f);
+            controlsRect.pivot = new Vector2(0.5f, 0f);
+            controlsRect.anchoredPosition = new Vector2(0f, Margin + navigatorHeight + 6f);
+            controlsRect.sizeDelta = new Vector2(-2f * Margin, controlBarHeight);
+            controlsRect.gameObject.AddComponent<ControlBar>()
+                .Init(playback, loader, cameras, text => hoverText = text, () => shortcuts.Toggle(), fontSize);
+
             status = CreateText(canvas.transform, "Status", top: false);
-            ((RectTransform)status.transform).anchoredPosition = new Vector2(0f, Margin + navigatorHeight + 6f);
+            ((RectTransform)status.transform).anchoredPosition =
+                new Vector2(0f, Margin + navigatorHeight + 6f + controlBarHeight + 6f);
 
             var navRect = new GameObject("PlayNavigator", typeof(RectTransform)).GetComponent<RectTransform>();
             navRect.SetParent(canvas.transform, false);
@@ -187,6 +201,15 @@ namespace Hindsight.UI
             navRect.anchoredPosition = new Vector2(0f, Margin);
             navRect.sizeDelta = new Vector2(-2f * Margin, navigatorHeight);
             navRect.gameObject.AddComponent<PlayNavigator>().Init(loader, text => hoverText = text);
+
+            // Last, so it draws over everything else.
+            var shortcutsRect = new GameObject("ShortcutsModal", typeof(RectTransform)).GetComponent<RectTransform>();
+            shortcutsRect.SetParent(canvas.transform, false);
+            shortcutsRect.anchorMin = Vector2.zero;
+            shortcutsRect.anchorMax = Vector2.one;
+            shortcutsRect.offsetMin = shortcutsRect.offsetMax = Vector2.zero;
+            shortcuts = shortcutsRect.gameObject.AddComponent<ShortcutsModal>();
+            shortcuts.Init(fontSize);
 
             // Clicks need an EventSystem; the Input System module picks up its default UI actions.
             if (EventSystem.current == null && FindAnyObjectByType<EventSystem>() == null)

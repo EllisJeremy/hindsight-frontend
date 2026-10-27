@@ -21,9 +21,10 @@ Assets/Scripts/
   Playback/  PlaybackController, PlayTimeline (sampling), ThrowArc, PlayerView, BallView, TeamColors
   Field/     FieldBuilder (field mesh, lines, hashes, TMP yard numbers, LOS / first down markers)
   Cameras/   CameraRig (top-down, broadcast, first person, third person)
-  UI/        PlaybackInput (keyboard), PlaybackHud (TMP overlay), PlayNavigator + NavCell
-             (quarter > drive > play accordion bar), FollowPicker (who the follow cameras
-             ride), Billboard
+  UI/        PlaybackInput (keyboard), PlaybackHud (TMP overlay), ControlBar (buttons for
+             every key, plus a scrubber), ShortcutsModal (? dialog), UiStyle (colors, and
+             rounded/icon sprites drawn in code), PlayNavigator + NavCell (quarter > drive >
+             play accordion bar), FollowPicker (who the follow cameras ride), Billboard
   Editor/    HindsightSetup (menu: generates materials, prefabs, scene object)
 Assets/Art/Materials/          Unlit.mat, Ball.mat (generated)
 Assets/Prefabs/                Player.prefab, Ball.prefab (generated, safe to customize)
@@ -47,7 +48,22 @@ Assets/Prefabs/                Player.prefab, Ball.prefab (generated, safe to cu
 
 Controls: Space play/pause, Left/Right step a frame, 1-4 speed (0.25/0.5/1/2x), R restart,
 N/] next play, P/[ previous play, S toggle the model's suggested version of the play,
-G next suggested play (Shift+G previous), C next camera (Shift+C previous).
+G next suggested play (Shift+G previous), C next camera (Shift+C previous), ? shortcuts.
+Keys are not shown on screen: ? (or the bar's ? button) opens a dialog listing them, built
+from `PlaybackInput.Shortcuts`, so add new keys there too.
+
+Control bar (above the navigator): the same controls as buttons, so the app is usable with the
+mouse alone: icon buttons for previous play / restart / step / play-pause / step / next play,
+speed, a scrubber (drag pauses; on a suggested play a gold tick marks where the prediction
+starts), Real / Suggested with < > to browse suggested plays, the four camera views, and ?.
+Buttons read their state from the playback, loader and camera rig every frame, so keys and
+clicks never disagree. Hovering a button shows what it does and its key in the status line.
+When the current play has no suggested version, Suggested opens the first suggested play.
+
+UI style (`UiStyle`): one translucent rounded bar, borderless buttons with muted text, a faint
+fill on hover and a brighter one for the active choice; gold (`UiStyle.Accent`) only for the
+model's output. No imported art: rounded rects and icons are drawn from distance functions at
+startup and cached.
 
 Suggested plays (backend only): `GET /suggested` lists them, `GET /plays/{id}/suggested` returns
 one as play JSON. Frames before `simulationStartFrameId` are recorded, frames from it on are the
