@@ -48,6 +48,11 @@ namespace Hindsight.UI
         {
             loadError = null;
             PlayData p = timeline.Play;
+            if (p.suggested)
+            {
+                header.text = SuggestedHeader(timeline);
+                return;
+            }
             string matchup = p.possessionTeam == p.homeTeam
                 ? $"{p.visitorTeam} @ <b>{p.homeTeam}</b>"
                 : $"<b>{p.visitorTeam}</b> @ {p.homeTeam}";
@@ -56,6 +61,37 @@ namespace Hindsight.UI
                 $"<size=80%>drive {p.driveNumber}, play {loader.CurrentIndex + 1}/{loader.Plays.Count}</size>\n" +
                 $"<size=80%>{p.description}</size>";
         }
+
+        // The suggested play's source has no teams, quarter, clock or drive, so the header shows
+        // the model's verdict instead: who it would have thrown to, and why.
+        string SuggestedHeader(PlayTimeline t)
+        {
+            PlayData p = t.Play;
+            Recommendation rec = p.recommendation;
+            string situation = p.down > 0 ? $"{Ordinal(p.down)} & {p.yardsToGo}   " : "";
+            string verdict = "";
+            if (rec != null && rec.targetNflId != 0)
+            {
+                verdict = rec.targetNflId == rec.targetedNflId
+                    ? $"model agrees with the throw to {PlayerName(t, rec.targetNflId)}   "
+                    : $"model throws to <color={RecommendedColor}>{PlayerName(t, rec.targetNflId)}</color>, " +
+                      $"not {PlayerName(t, rec.targetedNflId)}" +
+                      (rec.separationAdvantageYards > 0 ? $" (+{rec.separationAdvantageYards:0.0} yd open)   " : "   ");
+            }
+            return
+                $"<color={RecommendedColor}><b>SUGGESTED</b></color> {p.gameId}_{p.playId}   {situation}{verdict}" +
+                $"<size=80%>suggested {loader.CurrentSuggestedIndex + 1}/{loader.Suggested.Count}</size>\n" +
+                $"<size=80%>{rec?.reason ?? p.description}</size>";
+        }
+
+        static string PlayerName(PlayTimeline t, long nflId)
+        {
+            PlayerInfo info = System.Array.Find(t.Players, p => p.nflId == nflId);
+            if (info == null) return $"#{nflId}";
+            return string.IsNullOrEmpty(info.name) ? $"{info.position} {nflId}" : info.name;
+        }
+
+        const string RecommendedColor = "#FFC62F";
 
         void Update()
         {
@@ -77,6 +113,7 @@ namespace Hindsight.UI
             status.text =
                 $"{state}  {playback.Speed:0.##}x   frame {t.FrameIdAt(frame)}/{t.Play.frames[t.FrameCount - 1].frameId}" +
                 $"   {(frame - t.SnapIndex) / t.FrameRate:+0.0;-0.0}s from snap   {evt}" +
+                SourceLabel(t, frame) +
                 (loader.IsLoading ? "   loading..." : "") +
                 $"   {CameraLabel(t, frame)}" +
                 $"\n<size=75%><color=#AAB4C0>{hoverText ?? PlaybackInput.Help}</color></size>";
@@ -101,8 +138,18 @@ namespace Hindsight.UI
                 subject = t.CarrierAt(frame);
             string who = subject < 0
                 ? "ball"
-                : $"{t.Players[subject].club} #{t.Players[subject].jerseyNumber} {t.Players[subject].name}";
+                : $"{t.Players[subject].club} {t.Players[subject].NumberLabel} {t.Players[subject].name}";
             return $"[{view}: {who}]";
+        }
+
+        /// <summary>On a suggested play, whether this frame is recorded tracking or the model's prediction.</summary>
+        static string SourceLabel(PlayTimeline t, float frame)
+        {
+            PlayData p = t.Play;
+            if (!p.suggested || p.simulationStartFrameId <= 0) return "";
+            return t.FrameIdAt(frame) >= p.simulationStartFrameId
+                ? $"   <color={RecommendedColor}>MODEL PREDICTION</color>"
+                : "   RECORDED";
         }
 
         static string Ordinal(int n) => n switch { 1 => "1st", 2 => "2nd", 3 => "3rd", _ => $"{n}th" };

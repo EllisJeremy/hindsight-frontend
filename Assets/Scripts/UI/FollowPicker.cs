@@ -72,7 +72,7 @@ namespace Hindsight.UI
                     .ThenBy(p => p.jerseyNumber);
                 foreach (PlayerInfo p in players)
                 {
-                    labels.Add($"{p.club} #{p.jerseyNumber} {p.position}  {p.name}");
+                    labels.Add($"{p.club} {p.NumberLabel} {p.position}  {p.name}");
                     optionIds.Add(p.nflId);
                 }
             }

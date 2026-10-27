@@ -25,12 +25,12 @@ namespace Hindsight.Playback
         public void Setup(PlayerInfo info, TeamColors.Kit kit)
         {
             Info = info;
-            name = $"{info.club} #{info.jerseyNumber} {info.name}";
+            name = $"{info.club} {info.NumberLabel} {info.name}";
             Tint(jerseyRenderers, kit.Jersey);
             Tint(trimRenderers, kit.Number);
             if (numberLabel != null)
             {
-                numberLabel.text = info.jerseyNumber.ToString();
+                numberLabel.text = info.jerseyNumber > 0 ? info.jerseyNumber.ToString() : info.position;
                 numberLabel.color = kit.Number;
             }
         }

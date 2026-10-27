@@ -35,6 +35,50 @@ namespace Hindsight.Data
         public int snapFrameId;
         public PlayerInfo[] players;
         public FrameData[] frames;
+
+        // Only on the model's suggested plays (GET /plays/{id}/suggested); absent, so
+        // false/0/empty, on recorded plays.
+        /// <summary>True when this is the model's suggested version of a play, not a recording.</summary>
+        public bool suggested;
+        /// <summary>First frameId that is the model's prediction; earlier frames are recorded.</summary>
+        public int simulationStartFrameId;
+        /// <summary>The recorded play's description (description holds the model's reason).</summary>
+        public string realPlayDescription;
+        public Recommendation recommendation;
+    }
+
+    /// <summary>The model's verdict on a suggested play.</summary>
+    [Serializable]
+    public class Recommendation
+    {
+        /// <summary>e.g. "consider_alternative".</summary>
+        public string decision;
+        /// <summary>The receiver the model recommends throwing to.</summary>
+        public long targetNflId;
+        /// <summary>The receiver the ball actually went to.</summary>
+        public long targetedNflId;
+        /// <summary>The model's explanation in plain English.</summary>
+        public string reason;
+        /// <summary>How much more open the recommended receiver was predicted to be, in yards.</summary>
+        public float separationAdvantageYards;
+        public string caveat;
+    }
+
+    /// <summary>Plays the model has a suggested version of (GET /suggested).</summary>
+    [Serializable]
+    public class SuggestedList
+    {
+        public SuggestedEntry[] plays;
+    }
+
+    [Serializable]
+    public class SuggestedEntry
+    {
+        /// <summary>"{gameId}_{playId}", used to fetch the suggested play.</summary>
+        public string playId;
+        public string decision;
+        public long targetNflId;
+        public string reason;
     }
 
     [Serializable]
@@ -47,6 +91,9 @@ namespace Hindsight.Data
         public string position;
         /// <summary>"offense" or "defense".</summary>
         public string side;
+
+        /// <summary>"#17", or the position when the source has no jersey numbers (suggested plays).</summary>
+        public string NumberLabel => jerseyNumber > 0 ? $"#{jerseyNumber}" : position;
     }
 
     [Serializable]

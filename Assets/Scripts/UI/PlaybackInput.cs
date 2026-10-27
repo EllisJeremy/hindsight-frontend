@@ -13,13 +13,16 @@ namespace Hindsight.UI
     ///   1-4          speed 0.25x / 0.5x / 1x / 2x
     ///   R            restart
     ///   N or ]       next play       P or [   previous play
+    ///   S            toggle the recorded play and the model's suggested version
+    ///   G            next suggested play     Shift+G   previous suggested play
     ///   C            next camera: top-down > broadcast > first person > third person
     ///   Shift+C      previous camera
     /// </summary>
     public class PlaybackInput : MonoBehaviour
     {
         public const string Help =
-            "Space play/pause   Left/Right step   1-4 speed   R restart   N/P next/prev play   C/Shift+C camera";
+            "Space play/pause   Left/Right step   1-4 speed   R restart   N/P next/prev play   " +
+            "S suggested   G/Shift+G browse suggested   C/Shift+C camera";
 
         PlaybackController playback;
         PlayLoader loader;
@@ -51,6 +54,8 @@ namespace Hindsight.UI
             {
                 if (kb.nKey.wasPressedThisFrame || kb.rightBracketKey.wasPressedThisFrame) loader.Next();
                 if (kb.pKey.wasPressedThisFrame || kb.leftBracketKey.wasPressedThisFrame) loader.Previous();
+                if (kb.sKey.wasPressedThisFrame) loader.ToggleSuggested();
+                if (kb.gKey.wasPressedThisFrame) loader.NextSuggested(kb.shiftKey.isPressed ? -1 : 1);
             }
 
             if (cameras != null && kb.cKey.wasPressedThisFrame)

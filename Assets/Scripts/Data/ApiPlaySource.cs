@@ -9,6 +9,8 @@ namespace Hindsight.Data
     ///   GET {baseUrl}/games                -> GameList (used to pick a game when gameId is 0)
     ///   GET {baseUrl}/plays?gameId={id}    -> PlayIndex
     ///   GET {baseUrl}/plays/{playId}       -> PlayData
+    ///   GET {baseUrl}/suggested            -> SuggestedList
+    ///   GET {baseUrl}/plays/{playId}/suggested -> PlayData (the model's suggested version)
     /// UnityWebRequest only, so it is WebGL safe (the API allows any origin).
     /// </summary>
     public class ApiPlaySource : IPlaySource
@@ -40,6 +42,18 @@ namespace Hindsight.Data
         public async Awaitable<PlayData> LoadPlayAsync(string playId)
         {
             string json = await GetTextAsync($"{baseUrl}/plays/{UnityWebRequest.EscapeURL(playId)}");
+            return JsonUtility.FromJson<PlayData>(json);
+        }
+
+        public async Awaitable<SuggestedList> LoadSuggestedListAsync()
+        {
+            string json = await GetTextAsync($"{baseUrl}/suggested");
+            return JsonUtility.FromJson<SuggestedList>(json);
+        }
+
+        public async Awaitable<PlayData> LoadSuggestedAsync(string playId)
+        {
+            string json = await GetTextAsync($"{baseUrl}/plays/{UnityWebRequest.EscapeURL(playId)}/suggested");
             return JsonUtility.FromJson<PlayData>(json);
         }
 

@@ -145,10 +145,15 @@ namespace Hindsight.Playback
             if (views.Count > players.Length)
                 views.RemoveRange(players.Length, views.Count - players.Length);
 
+            // On a suggested play, the receiver the model would have thrown to stands out.
+            long recommended = play.suggested && play.recommendation != null ? play.recommendation.targetNflId : 0;
             for (int p = 0; p < players.Length; p++)
             {
                 bool isHome = players[p].club == play.homeTeam;
-                views[p].Setup(players[p], TeamColors.For(players[p].club, isHome));
+                TeamColors.Kit kit = recommended != 0 && players[p].nflId == recommended
+                    ? TeamColors.Recommended
+                    : TeamColors.For(players[p].club, isHome);
+                views[p].Setup(players[p], kit);
             }
         }
     }

@@ -46,7 +46,18 @@ Assets/Prefabs/                Player.prefab, Ball.prefab (generated, safe to cu
 "is the API running?", show in the HUD status line.
 
 Controls: Space play/pause, Left/Right step a frame, 1-4 speed (0.25/0.5/1/2x), R restart,
-N/] next play, P/[ previous play, C next camera (Shift+C previous).
+N/] next play, P/[ previous play, S toggle the model's suggested version of the play,
+G next suggested play (Shift+G previous), C next camera (Shift+C previous).
+
+Suggested plays (backend only): `GET /suggested` lists them, `GET /plays/{id}/suggested` returns
+one as play JSON. Frames before `simulationStartFrameId` are recorded, frames from it on are the
+model's prediction (the HUD says RECORDED / MODEL PREDICTION); the ball after the throw is a
+straight line to the recommended receiver, who is drawn in gold. The model reviews Big Data Bowl
+2026 (2023 season) while the replays are 2025, so most suggested plays have no recorded play in
+the index: S only works when the current play has one, G browses all of them. Their source has
+no teams, quarter, clock or jersey numbers: clubs are `OFF`/`DEF` and players are labeled by
+position. To develop without real data, start the API with
+`SUGGESTED_PATH=tests/fixtures_suggested.jsonl`.
 
 Cameras cycle top-down > broadcast > first person > third person. The two follow views
 ride the ball carrier by default and chase the ball while it is in the air or loose; the
@@ -166,6 +177,19 @@ quarter and drive (true when sorted by playId).
       ] }
   ]
 }
+```
+
+Suggested plays (`GET /plays/{id}/suggested`) are the same shape plus, at the top level:
+
+```jsonc
+  "suggested": true,
+  "simulationStartFrameId": 6,   // first predicted frameId; earlier frames are recorded
+  "realPlayDescription": "...",  // description holds "SUGGESTED (model) — {reason}"
+  "recommendation": {
+    "decision": "consider_alternative",
+    "targetNflId": 3,            // receiver the model recommends
+    "targetedNflId": 2,          // receiver the ball actually went to
+    "reason": "...", "separationAdvantageYards": 4.2, "caveat": "..." }
 ```
 
 Notes for producers (exporter or backend):

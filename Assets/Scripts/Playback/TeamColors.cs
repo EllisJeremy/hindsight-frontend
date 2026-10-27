@@ -18,6 +18,9 @@ namespace Hindsight.Playback
 
         static readonly Color AwayWhite = Hex("F2F2F2");
 
+        /// <summary>The receiver a suggested play recommends; matches the HUD's highlight color.</summary>
+        public static readonly Kit Recommended = new(Hex("FFC62F"), Hex("101820"));
+
         // (home jersey, home number)
         static readonly Dictionary<string, (string jersey, string number)> Clubs = new()
         {

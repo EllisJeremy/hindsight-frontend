@@ -43,6 +43,17 @@ namespace Hindsight.Data
             return JsonUtility.FromJson<PlayData>(json);
         }
 
+        // Suggested plays are converted by the backend, so offline there are none.
+        public Awaitable<SuggestedList> LoadSuggestedListAsync()
+        {
+            var done = new AwaitableCompletionSource<SuggestedList>();
+            done.SetResult(new SuggestedList { plays = Array.Empty<SuggestedEntry>() });
+            return done.Awaitable;
+        }
+
+        public Awaitable<PlayData> LoadSuggestedAsync(string playId) =>
+            throw new NotSupportedException("Suggested plays come from the backend; set PlayLoader's Source to Backend.");
+
         static async Awaitable<string> GetTextAsync(string url)
         {
             using var request = UnityWebRequest.Get(url);

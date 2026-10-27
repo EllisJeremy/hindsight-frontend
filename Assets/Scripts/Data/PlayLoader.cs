@@ -30,10 +30,17 @@ namespace Hindsight.Data
         public IReadOnlyList<PlayIndexEntry> Plays => index?.plays ?? Array.Empty<PlayIndexEntry>();
         public int CurrentIndex { get; private set; } = -1;
         public bool IsLoading { get; private set; }
+        /// <summary>Plays the model has a suggested version of. Most are not in Plays: the model
+        /// reviews a different season than the replays are exported from.</summary>
+        public IReadOnlyList<SuggestedEntry> Suggested => suggested;
+        /// <summary>The play whose suggested version is showing, or null when showing a recording.</summary>
+        public string CurrentSuggestedId { get; private set; }
+        public int CurrentSuggestedIndex => CurrentSuggestedId == null ? -1 : suggested.FindIndex(s => s.playId == CurrentSuggestedId);
 
         IPlaySource playSource;
         PlayIndex index;
         readonly Dictionary<string, PlayData> cache = new();
+        readonly List<SuggestedEntry> suggested = new();
         int requestVersion;
 
         public IPlaySource Source => playSource ??= source == SourceKind.Backend
@@ -64,34 +71,97 @@ namespace Hindsight.Data
                 Fail("Play index is empty.");
                 return;
             }
+            await LoadSuggestedListAsync();
             await LoadAtAsync(0);
         }
 
+        /// <summary>Optional: without suggested plays the app still replays recordings.</summary>
+        async Awaitable LoadSuggestedListAsync()
+        {
+            suggested.Clear();
+            try
+            {
+                SuggestedList list = await Source.LoadSuggestedListAsync();
+                if (list?.plays != null) suggested.AddRange(list.plays);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[PlayLoader] No suggested plays: {e.Message}");
+            }
+        }
+
+        public bool HasSuggested(string playId) => suggested.Exists(s => s.playId == playId);
+
         public void Next() => _ = LoadAtAsync(Wrap(CurrentIndex + 1));
         public void Previous() => _ = LoadAtAsync(Wrap(CurrentIndex - 1));
+
+        /// <summary>Switch between the current recorded play and the model's suggested version.
+        /// From a suggested play this always returns to the recorded play at CurrentIndex.</summary>
+        public void ToggleSuggested()
+        {
+            if (CurrentSuggestedId != null)
+            {
+                _ = LoadAtAsync(CurrentIndex);
+                return;
+            }
+            string id = CurrentIndex >= 0 && CurrentIndex < Plays.Count ? Plays[CurrentIndex].id : null;
+            if (id != null && HasSuggested(id))
+                _ = LoadSuggestedAsync(id);
+            else
+                Fail(suggested.Count == 0
+                    ? "The API has no suggested plays (see SUGGESTED_PATH in its README)."
+                    : $"No suggested version of {id}. G browses the {suggested.Count} that exist.");
+        }
+
+        /// <summary>Step through the suggested plays, whether or not they are in the play index.</summary>
+        public void NextSuggested(int direction)
+        {
+            if (suggested.Count == 0)
+            {
+                Fail("The API has no suggested plays (see SUGGESTED_PATH in its README).");
+                return;
+            }
+            int at = CurrentSuggestedIndex;
+            int next = at < 0
+                ? (direction > 0 ? 0 : suggested.Count - 1)
+                : ((at + direction) % suggested.Count + suggested.Count) % suggested.Count;
+            _ = LoadSuggestedAsync(suggested[next].playId);
+        }
 
         public async Awaitable LoadAtAsync(int i)
         {
             if (Plays.Count == 0) return;
             i = Wrap(i);
             string id = Plays[i].id;
-            int version = ++requestVersion;
             CurrentIndex = i;
+            CurrentSuggestedId = null;
+            await LoadAsync(id, $"play {id}", () => Source.LoadPlayAsync(id));
+        }
 
-            if (!cache.TryGetValue(id, out var play))
+        public async Awaitable LoadSuggestedAsync(string playId)
+        {
+            CurrentSuggestedId = playId;
+            await LoadAsync($"suggested:{playId}", $"suggested play {playId}", () => Source.LoadSuggestedAsync(playId));
+        }
+
+        async Awaitable LoadAsync(string cacheKey, string label, Func<Awaitable<PlayData>> fetch)
+        {
+            int version = ++requestVersion;
+
+            if (!cache.TryGetValue(cacheKey, out var play))
             {
                 IsLoading = true;
                 try
                 {
-                    play = await Source.LoadPlayAsync(id);
+                    play = await fetch();
                 }
                 catch (Exception e)
                 {
                     if (version == requestVersion) IsLoading = false;
-                    Fail($"Could not load play {id}: {e.Message}");
+                    Fail($"Could not load {label}: {e.Message}");
                     return;
                 }
-                cache[id] = play;
+                cache[cacheKey] = play;
             }
 
             // A newer request started while this one was in flight; drop this result.
@@ -100,12 +170,12 @@ namespace Hindsight.Data
 
             if (play == null || play.schemaVersion != SchemaVersion)
             {
-                Fail($"Play {id} has schemaVersion {play?.schemaVersion}, this client reads {SchemaVersion}.");
+                Fail($"{label} has schemaVersion {play?.schemaVersion}, this client reads {SchemaVersion}.");
                 return;
             }
             if (play.frames == null || play.frames.Length == 0)
             {
-                Fail($"Play {id} has no frames.");
+                Fail($"{label} has no frames.");
                 return;
             }
             PlayLoaded?.Invoke(play);
