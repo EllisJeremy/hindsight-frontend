@@ -30,8 +30,8 @@ namespace Hindsight.Data
         public IReadOnlyList<PlayIndexEntry> Plays => index?.plays ?? Array.Empty<PlayIndexEntry>();
         public int CurrentIndex { get; private set; } = -1;
         public bool IsLoading { get; private set; }
-        /// <summary>Plays the model has a suggested version of. Most are not in Plays: the model
-        /// reviews a different season than the replays are exported from.</summary>
+        /// <summary>Plays the model has a suggested version of (pass plays it reviewed). Entries
+        /// need not be in Plays if the API serves suggestions for another game.</summary>
         public IReadOnlyList<SuggestedEntry> Suggested => suggested;
         /// <summary>The play whose suggested version is showing, or null when showing a recording.</summary>
         public string CurrentSuggestedId { get; private set; }
@@ -66,6 +66,7 @@ namespace Hindsight.Data
                 index = null;
                 return;
             }
+            DropOtherGames();
             if (Plays.Count == 0)
             {
                 Fail("Play index is empty.");
@@ -73,6 +74,16 @@ namespace Hindsight.Data
             }
             await LoadSuggestedListAsync();
             await LoadAtAsync(0);
+        }
+
+        /// <summary>The API's default play folder lists video clips (game 999000001) inside this
+        /// game's index; they would show up as an extra Q1 in the navigator.</summary>
+        void DropOtherGames()
+        {
+            var kept = Array.FindAll(index.plays ?? Array.Empty<PlayIndexEntry>(), p => p.gameId == index.gameId);
+            int dropped = (index.plays?.Length ?? 0) - kept.Length;
+            if (dropped > 0) Debug.LogWarning($"[PlayLoader] Ignoring {dropped} index entries from other games.");
+            index.plays = kept;
         }
 
         /// <summary>Optional: without suggested plays the app still replays recordings.</summary>
@@ -110,7 +121,7 @@ namespace Hindsight.Data
             else
                 Fail(suggested.Count == 0
                     ? "The API has no suggested plays (see SUGGESTED_PATH in its README)."
-                    : $"No suggested version of {id}. G browses the {suggested.Count} that exist.");
+                    : $"No suggested version of {id} (the model only reviews pass plays). G browses the {suggested.Count} that exist.");
         }
 
         /// <summary>Step through the suggested plays, whether or not they are in the play index.</summary>
@@ -140,6 +151,9 @@ namespace Hindsight.Data
 
         public async Awaitable LoadSuggestedAsync(string playId)
         {
+            // Follow along in the play list so the navigator and Real point at the same play.
+            int i = IndexOf(playId);
+            if (i >= 0) CurrentIndex = i;
             CurrentSuggestedId = playId;
             await LoadAsync($"suggested:{playId}", $"suggested play {playId}", () => Source.LoadSuggestedAsync(playId));
         }
@@ -179,6 +193,13 @@ namespace Hindsight.Data
                 return;
             }
             PlayLoaded?.Invoke(play);
+        }
+
+        int IndexOf(string playId)
+        {
+            for (int i = 0; i < Plays.Count; i++)
+                if (Plays[i].id == playId) return i;
+            return -1;
         }
 
         int Wrap(int i) => Plays.Count == 0 ? 0 : ((i % Plays.Count) + Plays.Count) % Plays.Count;

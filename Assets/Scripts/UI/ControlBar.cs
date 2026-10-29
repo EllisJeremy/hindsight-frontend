@@ -131,14 +131,14 @@ namespace Hindsight.UI
             if (loader.CurrentSuggestedId != null) _ = loader.LoadAtAsync(loader.CurrentIndex);
         }
 
-        // The model reviews a different season than the replays, so most recorded plays have no
-        // suggested version; then this opens the suggested plays instead of doing nothing.
+        // The model only reviews pass plays, so some recorded plays have no suggested version;
+        // the button is disabled there rather than opening a different play.
+        bool CanShowSuggested => loader.CurrentSuggestedId != null
+            || (CurrentPlayId is string id && loader.HasSuggested(id));
+
         void ShowSuggested()
         {
-            if (loader.CurrentSuggestedId != null) return;
-            string id = CurrentPlayId;
-            if (id != null && loader.HasSuggested(id)) _ = loader.LoadSuggestedAsync(id);
-            else loader.NextSuggested(1);
+            if (loader.CurrentSuggestedId == null && CanShowSuggested) _ = loader.LoadSuggestedAsync(CurrentPlayId);
         }
 
         string SuggestedHint()
@@ -149,7 +149,7 @@ namespace Hindsight.UI
             string id = CurrentPlayId;
             return id != null && loader.HasSuggested(id)
                 ? "The model's suggested version of this play (S)"
-                : $"This play has no suggested version. Opens suggested play 1 of {count} (G)";
+                : $"No suggested version of this play (the model only reviews passes). < > browse the {count} that exist (G)";
         }
 
         // ---------- Build ----------
@@ -194,7 +194,7 @@ namespace Hindsight.UI
                 hint: () => "The play as recorded (S)");
             Control suggested = AddTextButton("Suggested", 92f, ShowSuggested,
                 active: () => loader.CurrentSuggestedId != null,
-                enabled: () => loader.Suggested.Count > 0,
+                enabled: () => CanShowSuggested,
                 hint: SuggestedHint);
             suggested.ActiveColor = UiStyle.Accent;
             AddIconButton(UiStyle.Glyph.ChevronLeft, () => loader.NextSuggested(-1), () => "Previous suggested play (Shift+G)",

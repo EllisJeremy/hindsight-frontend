@@ -68,12 +68,12 @@ startup and cached.
 Suggested plays (backend only): `GET /suggested` lists them, `GET /plays/{id}/suggested` returns
 one as play JSON. Frames before `simulationStartFrameId` are recorded, frames from it on are the
 model's prediction (the HUD says RECORDED / MODEL PREDICTION); the ball after the throw is a
-straight line to the recommended receiver, who is drawn in gold. The model reviews Big Data Bowl
-2026 (2023 season) while the replays are 2025, so most suggested plays have no recorded play in
-the index: S only works when the current play has one, G browses all of them. Their source has
-no teams, quarter, clock or jersey numbers: clubs are `OFF`/`DEF` and players are labeled by
-position. To develop without real data, start the API with
-`SUGGESTED_PATH=tests/fixtures_suggested.jsonl`.
+straight line to the recommended receiver, who is drawn in gold. The model reviews the same Big
+Data Bowl 2025 game as the replays (2022090800), but only pass plays it could score: S only works
+when the current play has one, G browses all of them. Each suggested play starts 10 frames before
+the snap and ends when the ball arrives. Most say `target_was_reasonable` (the gold receiver is
+the one who was thrown to); `consider_alternative` plays show a different receiver. To develop
+without real data, start the API with `SUGGESTED_PATH=tests/fixtures_suggested.jsonl`.
 
 Cameras cycle top-down > broadcast > first person > third person. The two follow views
 ride the ball carrier by default and chase the ball while it is in the air or loose; the
