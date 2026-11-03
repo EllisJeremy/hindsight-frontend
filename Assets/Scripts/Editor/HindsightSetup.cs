@@ -94,17 +94,7 @@ namespace Hindsight.EditorTools
             facing.transform.localPosition = new Vector3(0f, 0.55f, 0.45f);
             facing.transform.localScale = new Vector3(0.3f, 0.3f, 0.3f);
 
-            var label = new GameObject("Number", typeof(RectTransform));
-            label.transform.SetParent(root.transform, false);
-            label.transform.localPosition = new Vector3(0f, 0.85f, 0f);
-            label.AddComponent<Billboard>();
-            var text = label.AddComponent<TextMeshPro>();
-            text.text = "00";
-            text.fontSize = 5f;
-            text.fontStyle = FontStyles.Bold;
-            text.alignment = TextAlignmentOptions.Center;
-            text.textWrappingMode = TextWrappingModes.NoWrap;
-            text.rectTransform.sizeDelta = new Vector2(2f, 1f);
+            TextMeshPro text = CreateNumberLabel(root.transform, 0.85f);
 
             var so = new SerializedObject(view);
             SetArray(so.FindProperty("jerseyRenderers"), body.GetComponent<Renderer>());
@@ -113,6 +103,23 @@ namespace Hindsight.EditorTools
             so.ApplyModifiedPropertiesWithoutUndo();
 
             return SavePrefab(root, PlayerPrefabPath).GetComponent<PlayerView>();
+        }
+
+        /// <summary>The jersey number floating above a player, always facing the camera.</summary>
+        internal static TextMeshPro CreateNumberLabel(Transform parent, float height)
+        {
+            var label = new GameObject("Number", typeof(RectTransform));
+            label.transform.SetParent(parent, false);
+            label.transform.localPosition = new Vector3(0f, height, 0f);
+            label.AddComponent<Billboard>();
+            var text = label.AddComponent<TextMeshPro>();
+            text.text = "00";
+            text.fontSize = 5f;
+            text.fontStyle = FontStyles.Bold;
+            text.alignment = TextAlignmentOptions.Center;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
+            text.rectTransform.sizeDelta = new Vector2(2f, 1f);
+            return text;
         }
 
         static BallView CreateBallPrefab(Material ballMaterial)
@@ -168,21 +175,21 @@ namespace Hindsight.EditorTools
             return go;
         }
 
-        static GameObject SavePrefab(GameObject root, string path)
+        internal static GameObject SavePrefab(GameObject root, string path)
         {
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
             Object.DestroyImmediate(root);
             return prefab;
         }
 
-        static void SetArray(SerializedProperty array, params Object[] values)
+        internal static void SetArray(SerializedProperty array, params Object[] values)
         {
             array.arraySize = values.Length;
             for (int i = 0; i < values.Length; i++)
                 array.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
         }
 
-        static void EnsureFolder(string path)
+        internal static void EnsureFolder(string path)
         {
             if (AssetDatabase.IsValidFolder(path)) return;
             string parent = System.IO.Path.GetDirectoryName(path)?.Replace('\\', '/');

@@ -117,14 +117,27 @@ namespace Hindsight.Playback
         void Apply()
         {
             float frame = CurrentFrame;
+            float rate = IsPlaying ? Speed : 0f;
             for (int p = 0; p < views.Count; p++)
             {
                 Vector2 xy = Timeline.PlayerPosition(p, frame);
-                views[p].SetPose(new Vector3(xy.x, 0f, xy.y), Timeline.PlayerOrientation(p, frame));
+                float yaw = Timeline.PlayerOrientation(p, frame);
+                views[p].SetPose(new Vector3(xy.x, 0f, xy.y), yaw);
+                views[p].SetMotion(LocalVelocity(p, frame, yaw), rate);
             }
 
             Vector2 b = Timeline.BallPosition(frame);
             ball.SetPosition(new Vector3(b.x, BallHeight(frame), b.y));
+        }
+
+        /// <summary>Velocity in yd/s relative to the player's facing (x = right, y = forward),
+        /// over two frames to smooth the 10 Hz tracking noise.</summary>
+        Vector2 LocalVelocity(int player, float frame, float yaw)
+        {
+            Vector2 v = (Timeline.PlayerPosition(player, frame + 1f) - Timeline.PlayerPosition(player, frame - 1f))
+                * (Timeline.FrameRate * 0.5f);
+            float r = yaw * Mathf.Deg2Rad, sin = Mathf.Sin(r), cos = Mathf.Cos(r);
+            return new Vector2(v.x * cos - v.y * sin, v.x * sin + v.y * cos);
         }
 
         float BallHeight(float frame)

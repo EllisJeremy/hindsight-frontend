@@ -37,8 +37,6 @@ namespace Hindsight.Cameras
 
         [Header("First person")]
         [SerializeField] float firstPersonFov = 75f;
-        [Tooltip("Camera height on a player. Bodies are 0.8 yd tall.")]
-        [SerializeField] float eyeHeight = 0.75f;
         [Tooltip("Degrees the view is tilted down.")]
         [SerializeField] float firstPersonPitch = 4f;
         [Tooltip("Yards behind the ball while it is in the air or loose.")]
@@ -227,7 +225,7 @@ namespace Hindsight.Cameras
 
             if (Current == View.FirstPerson && !onBall)
             {
-                position = anchor + Vector3.up * eyeHeight;
+                position = anchor + Vector3.up * playback.PlayerViews[subject].EyeHeight;
                 rotation = yaw * Quaternion.Euler(firstPersonPitch, 0f, 0f);
             }
             else if (Current == View.FirstPerson)

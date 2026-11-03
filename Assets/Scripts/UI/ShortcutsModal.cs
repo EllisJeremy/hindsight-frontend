@@ -14,6 +14,14 @@ namespace Hindsight.UI
     {
         const float PanelWidth = 520f;
 
+        /// <summary>Attribution that third-party asset licenses require (CC BY). Keep in step
+        /// with CREDITS.md.</summary>
+        public static readonly string[] Credits =
+        {
+            "Player model: \"Gridiron Jumpman - An American Football Player\" (skfb.ly/6WNRU) by "
+                + "Stuffed Dog Digital, licensed under CC BY 4.0 (creativecommons.org/licenses/by/4.0).",
+        };
+
         GameObject root;
 
         public bool IsOpen => root != null && root.activeSelf;
@@ -81,6 +89,26 @@ namespace Hindsight.UI
                 Label(row, action, fontSize * 0.68f, UiStyle.TextMuted, FontStyles.Normal, flexible: true);
                 foreach (string key in keys) Key(row, key, fontSize * 0.6f);
             }
+
+            if (Credits.Length > 0)
+            {
+                Label(Row(panel, 28f), "Credits", fontSize * 0.6f, UiStyle.Text, FontStyles.Bold, flexible: true);
+                foreach (string credit in Credits) Note(panel, credit, fontSize * 0.5f);
+            }
+        }
+
+        /// <summary>Small muted text that wraps to the panel width.</summary>
+        static void Note(RectTransform parent, string text, float size)
+        {
+            var go = new GameObject("Note", typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var tmp = go.AddComponent<TextMeshProUGUI>();
+            tmp.text = text;
+            tmp.fontSize = size;
+            tmp.color = UiStyle.TextMuted;
+            tmp.alignment = TextAlignmentOptions.TopLeft;
+            tmp.textWrappingMode = TextWrappingModes.Normal;
+            tmp.raycastTarget = false;
         }
 
         static RectTransform Row(RectTransform parent, float height)
