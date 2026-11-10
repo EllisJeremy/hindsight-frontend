@@ -20,6 +20,8 @@ namespace Hindsight.UI
         {
             "Player model: \"Gridiron Jumpman - An American Football Player\" (skfb.ly/6WNRU) by "
                 + "Stuffed Dog Digital, licensed under CC BY 4.0 (creativecommons.org/licenses/by/4.0).",
+            "Football model: \"Football\" (blendswap.com/blends/view/58039) by rnepb13, "
+                + "licensed under CC BY 3.0 (creativecommons.org/licenses/by/3.0).",
         };
 
         GameObject root;

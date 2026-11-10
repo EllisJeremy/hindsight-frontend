@@ -8,21 +8,16 @@ using UnityEngine;
 namespace Hindsight.EditorTools
 {
     /// <summary>
-    /// Generates the materials and prefabs from code and adds the app to the open scene,
-    /// so nothing has to be hand-edited. Safe to re-run; it overwrites the generated assets.
-    /// Prefabs are only regenerated when missing, so swapped-in models are kept.
+    /// Generates the field material, builds the player and ball prefabs from the models in
+    /// Assets/Art (AnimatedPlayerSetup, BallModelSetup) and adds the app to the open scene,
+    /// so nothing has to be hand-edited. Safe to re-run; existing prefabs are kept (re-run
+    /// Setup Animated Player / Setup Football Model to rebuild them).
     /// </summary>
     public static class HindsightSetup
     {
         const string MaterialsFolder = "Assets/Art/Materials";
-        const string PrefabsFolder = "Assets/Prefabs";
         const string UnlitPath = MaterialsFolder + "/Unlit.mat";
-        const string BallMaterialPath = MaterialsFolder + "/Ball.mat";
-        const string PlayerPrefabPath = PrefabsFolder + "/Player.prefab";
-        const string BallPrefabPath = PrefabsFolder + "/Ball.prefab";
         const string UnlitShader = "Universal Render Pipeline/Unlit";
-
-        static readonly Color BallColor = new Color32(0xFF, 0x7A, 0x1A, 0xFF);
 
         [MenuItem("Hindsight/Setup Scene")]
         public static void SetupScene()
@@ -30,25 +25,14 @@ namespace Hindsight.EditorTools
             if (!EnsureTmpResources()) return;
 
             Material unlit = EnsureMaterial(UnlitPath, Color.white);
-            Material ballMaterial = EnsureMaterial(BallMaterialPath, BallColor);
-            if (unlit == null || ballMaterial == null) return;
+            if (unlit == null) return;
 
-            PlayerView player = AssetDatabase.LoadAssetAtPath<PlayerView>(PlayerPrefabPath) ?? CreatePlayerPrefab(unlit);
-            BallView ball = AssetDatabase.LoadAssetAtPath<BallView>(BallPrefabPath) ?? CreateBallPrefab(ballMaterial);
+            // Built from the models in Assets/Art the first time; later runs reuse the prefabs.
+            PlayerView player = AnimatedPlayerSetup.LoadOrBuild();
+            BallView ball = BallModelSetup.LoadOrBuild();
+            if (player == null || ball == null) return;
 
             AddAppToScene(unlit, player, ball);
-        }
-
-        [MenuItem("Hindsight/Regenerate Prefabs")]
-        public static void RegeneratePrefabs()
-        {
-            if (!EnsureTmpResources()) return;
-            Material unlit = EnsureMaterial(UnlitPath, Color.white);
-            Material ballMaterial = EnsureMaterial(BallMaterialPath, BallColor);
-            if (unlit == null || ballMaterial == null) return;
-            CreatePlayerPrefab(unlit);
-            CreateBallPrefab(ballMaterial);
-            Debug.Log("[Hindsight] Regenerated Player and Ball prefabs.");
         }
 
         static bool EnsureTmpResources()
@@ -78,33 +62,6 @@ namespace Hindsight.EditorTools
             return material;
         }
 
-        static PlayerView CreatePlayerPrefab(Material unlit)
-        {
-            EnsureFolder(PrefabsFolder);
-            var root = new GameObject("Player");
-            var view = root.AddComponent<PlayerView>();
-
-            // Body: 0.9 yd wide, 0.8 yd tall (cylinder primitive is 2 units tall).
-            GameObject body = Primitive(PrimitiveType.Cylinder, "Body", root.transform, unlit);
-            body.transform.localPosition = new Vector3(0f, 0.4f, 0f);
-            body.transform.localScale = new Vector3(0.9f, 0.4f, 0.9f);
-
-            // Facing marker on the front (+z) edge.
-            GameObject facing = Primitive(PrimitiveType.Cube, "Facing", root.transform, unlit);
-            facing.transform.localPosition = new Vector3(0f, 0.55f, 0.45f);
-            facing.transform.localScale = new Vector3(0.3f, 0.3f, 0.3f);
-
-            TextMeshPro text = CreateNumberLabel(root.transform, 0.85f);
-
-            var so = new SerializedObject(view);
-            SetArray(so.FindProperty("jerseyRenderers"), body.GetComponent<Renderer>());
-            SetArray(so.FindProperty("trimRenderers"), facing.GetComponent<Renderer>());
-            so.FindProperty("numberLabel").objectReferenceValue = text;
-            so.ApplyModifiedPropertiesWithoutUndo();
-
-            return SavePrefab(root, PlayerPrefabPath).GetComponent<PlayerView>();
-        }
-
         /// <summary>The jersey number floating above a player, always facing the camera.</summary>
         internal static TextMeshPro CreateNumberLabel(Transform parent, float height)
         {
@@ -120,17 +77,6 @@ namespace Hindsight.EditorTools
             text.textWrappingMode = TextWrappingModes.NoWrap;
             text.rectTransform.sizeDelta = new Vector2(2f, 1f);
             return text;
-        }
-
-        static BallView CreateBallPrefab(Material ballMaterial)
-        {
-            EnsureFolder(PrefabsFolder);
-            var root = new GameObject("Ball");
-            root.AddComponent<BallView>();
-            // Exaggerated football (real one is ~0.3 yd long) so it reads at full-field zoom.
-            GameObject mesh = Primitive(PrimitiveType.Sphere, "Mesh", root.transform, ballMaterial);
-            mesh.transform.localScale = new Vector3(0.4f, 0.4f, 0.65f);
-            return SavePrefab(root, BallPrefabPath).GetComponent<BallView>();
         }
 
         static void AddAppToScene(Material unlit, PlayerView player, BallView ball)
@@ -160,19 +106,6 @@ namespace Hindsight.EditorTools
             EditorSceneManager.MarkSceneDirty(app.gameObject.scene);
             Selection.activeGameObject = app.gameObject;
             Debug.Log("[Hindsight] Scene ready. Save the scene and press Play.");
-        }
-
-        static GameObject Primitive(PrimitiveType type, string objectName, Transform parent, Material material)
-        {
-            GameObject go = GameObject.CreatePrimitive(type);
-            go.name = objectName;
-            go.transform.SetParent(parent, false);
-            Object.DestroyImmediate(go.GetComponent<Collider>());
-            var renderer = go.GetComponent<Renderer>();
-            renderer.sharedMaterial = material;
-            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            renderer.receiveShadows = false;
-            return go;
         }
 
         internal static GameObject SavePrefab(GameObject root, string path)

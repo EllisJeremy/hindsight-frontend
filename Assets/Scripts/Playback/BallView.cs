@@ -3,7 +3,7 @@ using UnityEngine;
 namespace Hindsight.Playback
 {
     /// <summary>
-    /// Visual for the football. Lives on the Ball prefab. Points its long axis (+z) along
+    /// Visual for the football. Lives on BallModel.prefab. Points its long axis (+z) along
     /// its direction of travel while moving.
     /// </summary>
     public class BallView : MonoBehaviour

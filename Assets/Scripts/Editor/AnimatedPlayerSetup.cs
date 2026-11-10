@@ -12,7 +12,7 @@ namespace Hindsight.EditorTools
     /// <summary>
     /// Turns the rigged player model and the Mixamo locomotion clips into PlayerAnimated.prefab
     /// and points the scene's HindsightApp at it. Safe to re-run: it rewrites the import settings,
-    /// the controller and the prefab. Hindsight > Use Primitive Players switches back.
+    /// the controller and the prefab. Hindsight > Setup Scene builds it when it is missing.
     ///
     /// Clips are matched by file name (see Slots). Each is placed in a 2D blend tree at its own
     /// ground speed when the clip has root motion; "In Place" clips have none, so they get the
@@ -26,7 +26,6 @@ namespace Hindsight.EditorTools
         const string ControllerPath = PlayersFolder + "/PlayerLocomotion.controller";
         const string JerseyMaterialPath = PlayersFolder + "/Jersey.mat";
         const string PrefabPath = "Assets/Prefabs/PlayerAnimated.prefab";
-        const string PrimitivePrefabPath = "Assets/Prefabs/Player.prefab";
         const string LitShader = "Universal Render Pipeline/Lit";
 
         /// <summary>A typical NFL player is about 6'2" (2.05 yd).</summary>
@@ -48,16 +47,29 @@ namespace Hindsight.EditorTools
         [MenuItem("Hindsight/Setup Animated Player")]
         public static void Setup()
         {
+            PlayerView view = Build();
+            if (view != null) UsePrefab(view);
+        }
+
+        /// <summary>The prefab Setup Scene uses: the existing one, or built now.</summary>
+        internal static PlayerView LoadOrBuild()
+        {
+            var view = AssetDatabase.LoadAssetAtPath<PlayerView>(PrefabPath);
+            return view != null ? view : Build();
+        }
+
+        static PlayerView Build()
+        {
             string modelPath = FindModel();
             if (modelPath == null)
             {
                 EditorUtility.DisplayDialog("Animated player",
                     $"No .fbx found under {ModelsFolder}. Put a rigged (humanoid) character there and run this again.", "OK");
-                return;
+                return null;
             }
 
             Avatar avatar = ImportModel(modelPath);
-            if (avatar == null) return;
+            if (avatar == null) return null;
 
             var clips = new List<(AnimationClip clip, Vector2 fallback, bool mirror)>();
             foreach (var slot in Slots)
@@ -74,21 +86,13 @@ namespace Hindsight.EditorTools
             if (!clips.Any(c => c.clip.name == "Idle"))
             {
                 Debug.LogError("[Hindsight] Idle.fbx is required (it is the blend tree's center).");
-                return;
+                return null;
             }
 
             GameObject prefab = BuildPrefab(modelPath, clips, out string report);
-            if (prefab == null) return;
-            UsePrefab(prefab.GetComponent<PlayerView>());
+            if (prefab == null) return null;
             Debug.Log($"[Hindsight] Animated player ready ({PrefabPath}).\n{report}");
-        }
-
-        [MenuItem("Hindsight/Use Primitive Players")]
-        public static void UsePrimitives()
-        {
-            var view = AssetDatabase.LoadAssetAtPath<PlayerView>(PrimitivePrefabPath);
-            if (view == null) Debug.LogError($"[Hindsight] {PrimitivePrefabPath} is missing; run Hindsight > Regenerate Prefabs.");
-            else UsePrefab(view);
+            return prefab.GetComponent<PlayerView>();
         }
 
         static string FindModel() =>

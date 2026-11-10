@@ -5,10 +5,9 @@ using UnityEngine;
 namespace Hindsight.Playback
 {
     /// <summary>
-    /// Visual for one player. Lives on the Player prefab; swap the prefab's meshes for nicer
-    /// models and keep this component. The root's forward (+z) is the player's facing.
-    /// With an Animator (Hindsight > Setup Animated Player), the locomotion blend tree follows
-    /// the tracking velocity; without one the model just slides, as the primitives do.
+    /// Visual for one player. Lives on PlayerAnimated.prefab (Hindsight > Setup Animated Player).
+    /// The root's forward (+z) is the player's facing. The Animator's locomotion blend tree
+    /// follows the tracking velocity; a prefab without an Animator just slides.
     /// </summary>
     public class PlayerView : MonoBehaviour
     {
