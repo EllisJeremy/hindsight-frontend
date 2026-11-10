@@ -37,6 +37,8 @@ namespace Hindsight.EditorTools
         static readonly (string file, Vector2 fallback, bool mirror)[] Slots =
         {
             ("Idle", Vector2.zero, false),
+            ("Walking", new Vector2(0f, 1.5f), false),
+            ("Walking Backwards", new Vector2(0f, -1.4f), false),
             ("Jogging", new Vector2(0f, 3.5f), false),
             ("Fast Run", new Vector2(0f, 7.5f), false),
             ("Jog Backward", new Vector2(0f, -3f), false),

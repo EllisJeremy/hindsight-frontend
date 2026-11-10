@@ -34,8 +34,9 @@ Assets/Art/Ball/               Football.fbx + Textures/ (converted from a Blende
 Assets/Art/GoalPost/           GoalPost.fbx + Textures/ (converted from a Blender file, rescaled to
                                NFL size: uprights 18'6" apart, crossbar 10 ft, tops 45 ft)
 Assets/Art/Players/Models/     rigged humanoid player model (.fbx + textures; first .fbx is used)
-Assets/Art/Players/Animations/ Mixamo clips: Idle, Jogging, Fast Run, Jog Backward, Jog Forward
-                               Diagonal, Jog Backward Diagonal (.fbx, matched by file name)
+Assets/Art/Players/Animations/ Mixamo clips: Idle, Walking, Walking Backwards, Jogging, Fast Run,
+                               Jog Backward, Jog Forward Diagonal, Jog Backward Diagonal (.fbx,
+                               matched by file name; download "Without Skin")
 Assets/Prefabs/                PlayerAnimated.prefab, BallModel.prefab, GoalPost.prefab (generated from the
                                models above; rebuild with the menu items, don't hand-edit)
 ```

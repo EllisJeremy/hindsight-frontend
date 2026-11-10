@@ -51,6 +51,7 @@ MonoBehaviour:
   trimRenderers: []
   numberLabel: {fileID: 6042199119120469540}
   eyeHeight: 1.886
+  ballHoldOffset: {x: 0.22, y: 1.15, z: 0.22}
   animator: {fileID: 7275406385099982302}
   topClipSpeed: 7.5
 --- !u!1 &492359254501501595
