@@ -22,6 +22,11 @@ namespace Hindsight.Playback
         [SerializeField] float ballGroundHeight = 0.15f;
         [Tooltip("Ball height while carried. Above the player bodies so it stays visible top-down.")]
         [SerializeField] float ballCarryHeight = 1.2f;
+        [Tooltip("Frames to ease the ball into a carrier's hands (catch, handoff) and back out (throw). " +
+                 "While carried it sits at the carrier's hold point instead of its jittery tracked position.")]
+        [SerializeField] float carryBlendFrames = 3f;
+        [Tooltip("Spiral of a thrown ball, degrees per second of play time (a real spiral is ~3600).")]
+        [SerializeField] float spiralDegreesPerSecond = 2400f;
 
         public PlayTimeline Timeline { get; private set; }
         public bool IsPlaying { get; private set; }
@@ -127,7 +132,22 @@ namespace Hindsight.Playback
             }
 
             Vector2 b = Timeline.BallPosition(frame);
-            ball.SetPosition(new Vector3(b.x, BallHeight(frame), b.y));
+            var position = new Vector3(b.x, BallHeight(frame), b.y);
+            // The ball is tracked separately from the players and wobbles around the carrier by up
+            // to a yard; pin it to their hands instead. Players are posed above, so this is current.
+            int holder = Timeline.BallHolderAt(frame, carryBlendFrames, out float hold);
+            if (holder >= 0 && holder < views.Count)
+                position = Vector3.Lerp(position, views[holder].BallHoldPosition, hold);
+            ball.SetPosition(position, Spiral(frame));
+        }
+
+        /// <summary>Roll of the ball in flight, from the release; 0 otherwise. Derived from the frame,
+        /// not accumulated, so scrubbing and slow motion stay consistent.</summary>
+        float Spiral(float frame)
+        {
+            ThrowArc.Window t = Timeline.Throw;
+            if (!t.IsValid || frame <= t.Start || frame >= t.End) return 0f;
+            return (frame - t.Start) / Timeline.FrameRate * spiralDegreesPerSecond;
         }
 
         /// <summary>Velocity in yd/s relative to the player's facing (x = right, y = forward),

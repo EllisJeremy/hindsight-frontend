@@ -4,7 +4,7 @@ namespace Hindsight.Playback
 {
     /// <summary>
     /// Visual for the football. Lives on BallModel.prefab. Points its long axis (+z) along
-    /// its direction of travel while moving.
+    /// its direction of travel while moving, and rolls about that axis by the given spin.
     /// </summary>
     public class BallView : MonoBehaviour
     {
@@ -12,13 +12,15 @@ namespace Hindsight.Playback
 
         Vector3 lastPosition;
         bool hasLast;
+        Quaternion heading = Quaternion.identity;
 
-        public void SetPosition(Vector3 position)
+        /// <param name="spin">Degrees of roll about the long axis (the spiral of a thrown ball).</param>
+        public void SetPosition(Vector3 position, float spin = 0f)
         {
             Vector3 delta = position - lastPosition;
             if (hasLast && delta.sqrMagnitude > MinMoveForHeading * MinMoveForHeading)
-                transform.rotation = Quaternion.LookRotation(delta);
-            transform.position = position;
+                heading = Quaternion.LookRotation(delta);
+            transform.SetPositionAndRotation(position, heading * Quaternion.Euler(0f, 0f, spin));
             lastPosition = position;
             hasLast = true;
         }
@@ -27,7 +29,8 @@ namespace Hindsight.Playback
         public void ResetHeading()
         {
             hasLast = false;
-            transform.rotation = Quaternion.identity;
+            heading = Quaternion.identity;
+            transform.rotation = heading;
         }
     }
 }

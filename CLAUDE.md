@@ -27,13 +27,16 @@ Assets/Scripts/
              play accordion bar), FollowPicker (who the follow cameras ride), Billboard
   Editor/    HindsightSetup (menu: field material, model prefabs, scene object),
              AnimatedPlayerSetup (menu: rigged model + Mixamo clips -> PlayerAnimated.prefab),
-             BallModelSetup (menu: Art/Ball/Football.fbx -> BallModel.prefab)
+             BallModelSetup (menu: Art/Ball/Football.fbx -> BallModel.prefab),
+             GoalPostSetup (menu: Art/GoalPost/GoalPost.fbx -> GoalPost.prefab)
 Assets/Art/Materials/          Unlit.mat (generated; field colors are instanced from it)
 Assets/Art/Ball/               Football.fbx + Textures/ (converted from a Blender file, see CREDITS.md)
+Assets/Art/GoalPost/           GoalPost.fbx + Textures/ (converted from a Blender file, rescaled to
+                               NFL size: uprights 18'6" apart, crossbar 10 ft, tops 45 ft)
 Assets/Art/Players/Models/     rigged humanoid player model (.fbx + textures; first .fbx is used)
 Assets/Art/Players/Animations/ Mixamo clips: Idle, Jogging, Fast Run, Jog Backward, Jog Forward
                                Diagonal, Jog Backward Diagonal (.fbx, matched by file name)
-Assets/Prefabs/                PlayerAnimated.prefab, BallModel.prefab (generated from the
+Assets/Prefabs/                PlayerAnimated.prefab, BallModel.prefab, GoalPost.prefab (generated from the
                                models above; rebuild with the menu items, don't hand-edit)
 ```
 
@@ -58,6 +61,9 @@ Player and ball models (each menu item rebuilds its prefab and points `Hindsight
   `PlayerView.SetMotion`; paused playback freezes the pose.
 - Hindsight > Setup Football Model: builds `BallModel.prefab` (0.5 yd long, about 1.6x real size
   so it reads from far away, long axis +z).
+- Hindsight > Setup Goal Post Model: builds `GoalPost.prefab` (origin in the uprights' plane, base
+  toward -x). Optional: `FieldBuilder` puts one on each end line (x 0 and 120, base outside the
+  field) when `HindsightApp.goalPostPrefab` is set.
 
 `PlayLoader` settings: **Source** (Backend or StreamingAssets), **Api Base Url** (default
 `http://localhost:8000`), **Game Id** (0 = first game from `GET /games`). Load errors, including
@@ -133,7 +139,12 @@ scramble, gold TD). Hover shows the play description above the bar.
   This is exactly Unity's yaw about +Y with +y mapped to +z, so `Quaternion.Euler(0, o, 0)`
   is used with no conversion.
 - Heights (y): field at 0, players 0..2.05 (6'2"), first-person eyes at 1.89, jersey number at
-  2.4, carried ball at 1.2, ball on the turf before the snap at 0.15.
+  2.4, ball on the turf before the snap at 0.15. A carried ball is drawn at the carrier's
+  `PlayerView` hold point (tucked under the right arm, 1.15 up) instead of its tracked x/y, which
+  wobbles around the carrier; it eases in and out over `carryBlendFrames` (3) at catches, handoffs
+  and throws. Otherwise the ball is at its tracked x/y, 1.2 up after the snap.
+- Thrown ball: nose along its direction of travel (including the arc) and a spiral of
+  `spiralDegreesPerSecond` (2400) of play time, computed from the frame so scrubbing matches.
 - Throw arc: data has no ball height. From `pass_forward` (or `pass_shovel`) to the first of
   `pass_arrived`, `pass_outcome_*`, or `pass_tipped`, the ball gets `+4*H*t*(1-t)` where
   `H = clamp(0.15 * throw distance, 1, 12)` yards. Ball x/y always come from the data.

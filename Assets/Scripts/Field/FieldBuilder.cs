@@ -44,7 +44,9 @@ namespace Hindsight.Field
         Transform scrimmageLine;
         Transform firstDownLine;
 
-        public void Build(Material unlit)
+        /// <param name="goalPost">Optional. Uprights' plane at its origin, base behind it toward -x;
+        /// one is placed on each end line with its base outside the field.</param>
+        public void Build(Material unlit, GameObject goalPost = null)
         {
             baseMaterial = unlit;
 
@@ -67,6 +69,19 @@ namespace Hindsight.Field
             scrimmageLine = AddMesh("LineOfScrimmage", VerticalStripe(0.25f), scrimmageColor).transform;
             firstDownLine = AddMesh("FirstDownLine", VerticalStripe(0.25f), firstDownColor).transform;
             SetMarkers(-1f, -1f);
+
+            if (goalPost != null)
+            {
+                AddGoalPost(goalPost, 0f, 0f);
+                AddGoalPost(goalPost, Length, 180f);
+            }
+        }
+
+        void AddGoalPost(GameObject prefab, float x, float yaw)
+        {
+            GameObject post = Instantiate(prefab, transform);
+            post.name = $"GoalPost {x:0}";
+            post.transform.SetLocalPositionAndRotation(new Vector3(x, 0f, Width / 2f), Quaternion.Euler(0f, yaw, 0f));
         }
 
         /// <summary>Position the line of scrimmage and line to gain (field x). Negative hides.</summary>

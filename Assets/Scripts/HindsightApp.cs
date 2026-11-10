@@ -19,6 +19,8 @@ namespace Hindsight
         [SerializeField] Material unlitMaterial;
         [SerializeField] PlayerView playerPrefab;
         [SerializeField] BallView ballPrefab;
+        [Tooltip("Optional: placed on both end lines.")]
+        [SerializeField] GameObject goalPostPrefab;
 
         PlayLoader loader;
         PlaybackController playback;
@@ -39,7 +41,7 @@ namespace Hindsight
             field = GetComponent<FieldBuilder>();
             cameras = GetComponent<CameraRig>();
 
-            field.Build(unlitMaterial);
+            field.Build(unlitMaterial, goalPostPrefab);
             cameras.Build(playback);
             playback.Configure(playerPrefab, ballPrefab);
             GetComponent<PlaybackInput>().Init(playback, loader, cameras);

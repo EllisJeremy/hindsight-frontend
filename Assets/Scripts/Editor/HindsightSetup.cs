@@ -31,8 +31,9 @@ namespace Hindsight.EditorTools
             PlayerView player = AnimatedPlayerSetup.LoadOrBuild();
             BallView ball = BallModelSetup.LoadOrBuild();
             if (player == null || ball == null) return;
+            GameObject goalPost = GoalPostSetup.LoadOrBuild(); // optional; the field is fine without
 
-            AddAppToScene(unlit, player, ball);
+            AddAppToScene(unlit, player, ball, goalPost);
         }
 
         static bool EnsureTmpResources()
@@ -79,7 +80,7 @@ namespace Hindsight.EditorTools
             return text;
         }
 
-        static void AddAppToScene(Material unlit, PlayerView player, BallView ball)
+        static void AddAppToScene(Material unlit, PlayerView player, BallView ball, GameObject goalPost)
         {
             var app = Object.FindAnyObjectByType<HindsightApp>();
             if (app == null)
@@ -93,6 +94,7 @@ namespace Hindsight.EditorTools
             so.FindProperty("unlitMaterial").objectReferenceValue = unlit;
             so.FindProperty("playerPrefab").objectReferenceValue = player;
             so.FindProperty("ballPrefab").objectReferenceValue = ball;
+            so.FindProperty("goalPostPrefab").objectReferenceValue = goalPost;
             so.ApplyModifiedProperties();
 
             // The app creates its own cameras; remove other scene cameras so they don't render over it.

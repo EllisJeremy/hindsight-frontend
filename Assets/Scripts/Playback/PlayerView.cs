@@ -24,6 +24,8 @@ namespace Hindsight.Playback
         [SerializeField] TMP_Text numberLabel;
         [Tooltip("First-person camera height above the turf, in yards.")]
         [SerializeField] float eyeHeight = 0.75f;
+        [Tooltip("Where a carried ball sits, in the player's frame (x right, y up, z forward), yards: tucked under the right arm.")]
+        [SerializeField] Vector3 ballHoldOffset = new(0.22f, 1.15f, 0.22f);
 
         [Header("Animation (optional)")]
         [Tooltip("Locomotion animator with Forward and Strafe floats (yd/s). Empty = no animation.")]
@@ -35,6 +37,8 @@ namespace Hindsight.Playback
 
         public PlayerInfo Info { get; private set; }
         public float EyeHeight => eyeHeight;
+        /// <summary>World position of a ball this player is carrying.</summary>
+        public Vector3 BallHoldPosition => transform.TransformPoint(ballHoldOffset);
 
         public void Setup(PlayerInfo info, TeamColors.Kit kit)
         {

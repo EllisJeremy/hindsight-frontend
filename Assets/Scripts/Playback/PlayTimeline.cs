@@ -31,6 +31,7 @@ namespace Hindsight.Playback
         readonly Vector2[] ballPositions;
         readonly string[] latestEvent;  // most recent event at or before each frame
         readonly int[] carriers;        // player index holding the ball per frame, -1 if loose
+        readonly int[] carrierSince;    // first frame of the run of equal carriers[] containing each frame
 
         public float LastFrame => FrameCount - 1;
         public float Duration => LastFrame / FrameRate;
@@ -81,6 +82,9 @@ namespace Hindsight.Playback
             FillGaps(seen);
             Throw = ThrowArc.FindWindow(play.frames, ballPositions);
             carriers = FindCarriers();
+            carrierSince = new int[FrameCount];
+            for (int f = 0; f < FrameCount; f++)
+                carrierSince[f] = f > 0 && carriers[f] == carriers[f - 1] ? carrierSince[f - 1] : f;
         }
 
         /// <summary>Interpolated field position (data x, y) of a player at a fractional frame.</summary>
@@ -111,6 +115,33 @@ namespace Hindsight.Playback
         /// (see FindCarriers), so it is a best guess, not a fact from the data.
         /// </summary>
         public int CarrierAt(float frame) => carriers[Mathf.Clamp(Mathf.RoundToInt(frame), 0, FrameCount - 1)];
+
+        /// <summary>
+        /// Who the ball should be drawn in the hands of, and how firmly (0 = at its tracked
+        /// position, 1 = in their hands). Ramps up over blendFrames when someone gains the ball
+        /// and down over blendFrames after they lose it, so catches, handoffs and throws ease
+        /// instead of popping. -1 before the snap: the ball sits where it was tracked.
+        /// </summary>
+        public int BallHolderAt(float frame, float blendFrames, out float weight)
+        {
+            weight = 0f;
+            if (frame < SnapIndex || FrameCount == 0) return -1;
+            int f = Mathf.Clamp(Mathf.FloorToInt(frame), 0, FrameCount - 1);
+            int since = carrierSince[f];
+            float blend = Mathf.Max(blendFrames, 0.01f);
+            if (carriers[f] >= 0)
+            {
+                weight = Mathf.Clamp01((frame - Mathf.Max(since, SnapIndex)) / blend);
+                return carriers[f];
+            }
+            // Just let go: keep easing out of the previous holder's hands.
+            if (since > 0 && carriers[since - 1] >= 0)
+            {
+                weight = 1f - Mathf.Clamp01((frame - since) / blend);
+                return carriers[since - 1];
+            }
+            return -1;
+        }
 
         /// <summary>Most recent event at or before the given frame, or null.</summary>
         public string EventAt(float frame) => latestEvent[Mathf.Clamp(Mathf.FloorToInt(frame), 0, FrameCount - 1)];
